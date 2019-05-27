@@ -1,0 +1,95 @@
+package {{apiPackage}};
+
+import au.org.consumerdatastandards.support.*;
+import au.org.consumerdatastandards.support.security.EndpointAuth;
+import au.org.consumerdatastandards.support.security.EndpointAuthAccess;
+import au.org.consumerdatastandards.support.security.EndpointAuthType;
+import au.org.consumerdatastandards.api.common.responses.ErrorResponse;
+import au.org.consumerdatastandards.api.common.models.Scope;
+import au.org.consumerdatastandards.support.data.Format;
+import au.org.consumerdatastandards.support.data.CustomAttribute;
+import au.org.consumerdatastandards.support.data.StringFormat;
+import au.org.consumerdatastandards.support.data.CustomAttributes;
+import au.org.consumerdatastandards.support.data.CDSDataType;
+import au.org.consumerdatastandards.support.data.CustomDataType;
+
+import {{modelPackage}}.*;
+
+{{#imports}}import {{import}};
+{{/imports}}
+
+{{#operations}}
+    @Section(name = "{{classname}}", tags = {"{{classname}}"})
+    public interface {{classname}}  {
+
+    {{#operation}}{{#subresourceOperation}}
+        @Endpoint(
+        path = "{{{baseName}}}",
+        summary = "{{ summary }}",
+        description = "{{{notes}}}",
+        requestMethod = RequestMethod.{{ httpMethod }},
+        operationId = "{{nickname}}",
+        responses = {
+        @EndpointResponse(
+        responseCode = ResponseCode.OK,
+        description = "Successful response for {{ summary }}",
+        content = {{returnBaseType}}{{^returnBaseType}}Void{{/returnBaseType}}.class
+        ){{#hasCdsScopes}},
+        @EndpointResponse(
+        responseCode = ResponseCode.UNAUTHORIZED,
+        description = "Authorization header missing or invalid token",
+        content = ErrorResponse.class
+        ),
+        @EndpointResponse(
+        responseCode = ResponseCode.FORBIDDEN,
+        description = "Token has incorrect scope or a security policy was violated.",
+        content = ErrorResponse.class
+        ){{/hasCdsScopes}}
+        }{{#hasCdsScopes}},
+        requiredAuth = {
+        @EndpointAuth(
+        type = EndpointAuthType.CDS_FAPI,
+        access = EndpointAuthAccess.READ_ONLY,
+        scopes = {
+        {{#cdsScopes}}Scope.{{.}}{{#hasMore}},{{/hasMore}}
+        {{/cdsScopes}}
+        }
+        )
+        }{{/hasCdsScopes}}
+        ){{#hasCdsScopes}}
+            @CustomAttributes({
+            @CustomAttribute(name = "x-version", value = "1"){{#cdsScopesLower}},
+            @CustomAttribute(name = "x-scopes", value = "{{.}}", multiple = true){{#hasMore}}, {{/hasMore}}{{/cdsScopesLower}}
+            }){{/hasCdsScopes}}
+        {{returnBaseType}}{{^returnBaseType}}Void{{/returnBaseType}} {{operationId}}({{#allParams}}
+            @Param({{^isBodyParam}}
+                name = "{{paramQueryName}}",{{/isBodyParam}}{{#isBodyParam}}
+                name = "{{paramName}}",{{/isBodyParam}}
+            description = "{{description}}",
+            in = {{#isHeaderParam}}ParamLocation.HEADER{{/isHeaderParam}}{{#isPathParam}}ParamLocation.PATH{{/isPathParam}}{{#isQueryParam}}ParamLocation.QUERY{{/isQueryParam}}{{#isBodyParam}}ParamLocation.BODY{{/isBodyParam}}{{#defaultValue}},
+            defaultValue = "{{{defaultValue}}}"{{/defaultValue}}{{#isRequired}},
+            required = true{{/isRequired}}{{#isReference}},
+            reference = "{{referenceName}}"{{/isReference}}
+            ){{#hasCdsType}}{{#isDateTimeString}}
+                @CDSDataType(CustomDataType.DateTime){{/isDateTimeString}}{{#isDateString}}
+                @CDSDataType(CustomDataType.Date){{/isDateString}}{{#isAcnString}}
+                @CDSDataType(CustomDataType.ACN){{/isAcnString}}{{#isAbnString}}
+                @CDSDataType(CustomDataType.ABN){{/isAbnString}}{{#isRateString}}
+                @CDSDataType(CustomDataType.Rate){{/isRateString}}{{#isMaskedPANString}}
+                @CDSDataType(CustomDataType.MaskedPAN){{/isMaskedPANString}}{{#isMaskedAccountString}}
+                @CDSDataType(CustomDataType.MaskedAccount){{/isMaskedAccountString}}{{#isURIString}}
+                @CDSDataType(CustomDataType.URI){{/isURIString}}{{#isAsciiString}}
+                @CDSDataType(CustomDataType.ASCII){{/isAsciiString}}{{#isAmountString}}
+                @CDSDataType(CustomDataType.Amount){{/isAmountString}}{{#isCurrencyString}}
+                @CDSDataType(CustomDataType.Currency){{/isCurrencyString}}{{#isNaturalNumber}}
+                @CDSDataType(CustomDataType.NaturalNumber){{/isNaturalNumber}}{{#isPositiveInteger}}
+                @CDSDataType(CustomDataType.PositiveInteger)(Format.PositiveInteger){{/isPositiveInteger}}{{#isNegativeInteger}}
+                @CDSDataType(CustomDataType.NegativeInteger){{/isNegativeInteger}}{{/hasCdsType}}
+            {{#isEnum}}Param{{datatypeWithEnum}}{{/isEnum}}{{^isEnum}}{{dataType}}{{/isEnum}} {{paramName}}{{#hasMore}}, {{/hasMore}}
+        {{/allParams}});
+    {{/subresourceOperation}}{{/operation}}
+{{/operations}}
+}
+
+
+
