@@ -1,8 +1,10 @@
 package io.swagger.codegen.languages;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.common.base.CaseFormat;
-import io.swagger.codegen.*;
+import io.swagger.codegen.CodegenModel;
+import io.swagger.codegen.CodegenOperation;
+import io.swagger.codegen.CodegenProperty;
+import io.swagger.codegen.CodegenType;
 import io.swagger.models.ComposedModel;
 import io.swagger.models.Model;
 import io.swagger.models.Operation;
@@ -11,7 +13,6 @@ import io.swagger.util.Yaml;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,44 +21,25 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JavaCdsModelsCodegen.class);
 
-    protected String title = "CDS Models Generator";
     protected String implFolder = "src/gen/java";
 
     public JavaCdsModelsCodegen() {
         super();
 
         sourceFolder = "src/gen/java";
-        apiTestTemplateFiles.clear(); // TODO: add test template
         embeddedTemplateDir = templateDir = "JavaCdsModels";
         artifactId = "cds-models";
+        apiPackage = "au.org.consumerdatastandards.api";
+        modelPackage = "au.org.consumerdatastandards.api.models";
 
-        // clear model and api doc templates
-        modelDocTemplateFiles.remove("model_doc.mustache");
-        apiDocTemplateFiles.remove("api_doc.mustache");
-
-        modelTemplateFiles.clear();
-        apiTemplateFiles.clear();
-        modelTemplateFiles.put("model.mustache", ".java");
-        apiTemplateFiles.put("api.mustache", ".java");
-
-        // clear lots of far more complicated options we don't need
-        cliOptions.clear();
-        cliOptions.add(new CliOption(CodegenConstants.MODEL_PACKAGE, CodegenConstants.MODEL_PACKAGE_DESC));
-        cliOptions.add(new CliOption(CodegenConstants.API_PACKAGE, CodegenConstants.API_PACKAGE_DESC));
-        cliOptions.add(new CliOption("pathLevel", "From what depth to export controllers"));
-
-        apiPackage = System.getProperty("swagger.codegen.cdsmodels.apipackage", "au.org.consumerdatastandards.api");
-        modelPackage = System.getProperty("swagger.codegen.cdsmodels.modelpackage",
-            "au.org.consumerdatastandards.api.models");
-
-        additionalProperties.put("title", title);
-        // java inflector uses the jackson lib
-        additionalProperties.put("jackson", "true");
+        modelDocTemplateFiles.clear();
+        apiDocTemplateFiles.clear();
+        apiTestTemplateFiles.clear();
     }
 
     @Override
     public CodegenType getTag() {
-        return CodegenType.SERVER;
+        return CodegenType.OTHER;
     }
 
     @Override
@@ -67,19 +49,12 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
 
     @Override
     public String getHelp() {
-        return "Generates a Consumer Data Standards Models.";
-    }
-
-    @Override
-    public void processOpts() {
-        super.processOpts();
+        return "Generates Consumer Data Standards Models.";
     }
 
     @Override
     public void addOperationToGroup(String tag, String resourcePath, Operation operation, CodegenOperation co,
                                     Map<String, List<CodegenOperation>> operations) {
-        String basePath = resourcePath;
-
         if (tag.endsWith("ApIs")) {
             tag = tag.replaceAll("ApIs", "Api");
             co.subresourceOperation = false;
@@ -92,34 +67,8 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             co.subresourceOperation = true;
         }
 
-        List<CodegenOperation> opList = operations.get(tag);
-
-        if (opList == null) {
-            opList = new ArrayList<CodegenOperation>();
-            operations.put(tag, opList);
-        }
-
-        // LOGGER.warn("Tag is set to: " + tag);
-
-        // check for operationId uniqueness
-
-        String uniqueName = co.operationId;
-        int counter = 0;
-        for (CodegenOperation op : opList) {
-            if (uniqueName.equals(op.operationId)) {
-                uniqueName = co.operationId + "_" + counter;
-                counter++;
-            }
-        }
-        if (!co.operationId.equals(uniqueName)) {
-            LOGGER.warn("generated unique operationId `" + uniqueName + "`");
-        }
-        co.operationId = uniqueName;
-        co.operationIdLowerCase = uniqueName.toLowerCase();
-        co.operationIdCamelCase = uniqueName;
-        co.operationIdSnakeCase = CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_HYPHEN, uniqueName);
-        co.baseName = basePath;
-        opList.add(co);
+        super.addOperationToGroup(tag, resourcePath, operation, co, operations);
+        co.baseName = resourcePath;
     }
 
     public void postProcessModelProperty(CodegenModel m, CodegenProperty prop, Model model) {
