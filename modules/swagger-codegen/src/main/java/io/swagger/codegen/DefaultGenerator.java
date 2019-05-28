@@ -33,7 +33,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
     protected Boolean isGenerateApiDocumentation = null;
     protected Boolean isGenerateModelTests = null;
     protected Boolean isGenerateModelDocumentation = null;
-    protected Boolean isGenerateSwaggerMetadata = true;
+    protected Boolean isGenerateSwaggerMetadata = false;
     protected String basePath;
     protected String basePathWithoutHost;
     protected String contextPath;
