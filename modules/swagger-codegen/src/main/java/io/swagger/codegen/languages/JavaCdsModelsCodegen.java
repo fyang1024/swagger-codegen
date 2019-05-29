@@ -1,12 +1,10 @@
 package io.swagger.codegen.languages;
 
-import io.swagger.codegen.CodegenModel;
-import io.swagger.codegen.CodegenOperation;
-import io.swagger.codegen.CodegenProperty;
-import io.swagger.codegen.CodegenType;
+import io.swagger.codegen.*;
 import io.swagger.codegen.mustache.UppercaseLambda;
 import io.swagger.models.Operation;
 import io.swagger.models.Tag;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -93,7 +91,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         super.postProcessOperations(objs);
         Map<String, Object> obj = (Map<String, Object>)objs.get("operations");
         List<CodegenOperation> operations = (List<CodegenOperation>) obj.get("operation");
-        List<CdsCodegenOperation> cdsCodegenOperations = operations.stream().map(o->new CdsCodegenOperation(o)).collect(Collectors.toList());
+        List<CdsCodegenOperation> cdsCodegenOperations = operations.stream().map(CdsCodegenOperation::new).collect(Collectors.toList());
         obj.put("operation", cdsCodegenOperations);
         List<String> tagNames = operations.get(0).tags.stream().map(Tag::getName).collect(Collectors.toList());
         objs.put("tags", tagNames);
@@ -107,7 +105,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         public Object cdsScopes;
         public Set<Map.Entry<String, Object>> cdsExtensionSet;
 
-        public CdsCodegenOperation(CodegenOperation co) {
+        CdsCodegenOperation(CodegenOperation co) {
 
             // Copy relevant fields of CodegenOperation
             this.responseHeaders.addAll(co.responseHeaders);
@@ -131,7 +129,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             this.baseName = co.baseName;
             this.defaultResponse = co.defaultResponse;
             this.discriminator = co.discriminator;
-            this.allParams = co.allParams;
+            this.allParams = co.allParams.stream().map(CdsCodegenParameter::new).collect(Collectors.toList());
             this.authMethods = co.authMethods;
             this.tags = co.tags;
             this.responses = co.responses;
@@ -139,11 +137,51 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             this.examples = co.examples;
             this.externalDocs = co.externalDocs;
 
-            // cds specific properties
+            // set cds specific properties
             this.cdsScopes = co.vendorExtensions.get("x-scopes");
             this.hasCdsScopes = cdsScopes != null && !((List)cdsScopes).isEmpty();
             co.vendorExtensions.remove("x-accepts");
             this.cdsExtensionSet = co.vendorExtensions.entrySet();
+        }
+    }
+
+    private static class CdsCodegenParameter extends CodegenParameter {
+        public String cdsTypeAnnotation;
+        public boolean isCdsType;
+
+        public CdsCodegenParameter(CodegenParameter cp) {
+
+            // copy relevant fields of CodegenParameter
+            this.baseName = cp.baseName;
+            this.description = cp.description;
+            this.isHeaderParam = cp.isHeaderParam;
+            this.isBodyParam = cp.isBodyParam;
+            this.isPathParam = cp.isPathParam;
+            this.isCookieParam = cp.isCookieParam;
+            this.isFormParam = cp.isFormParam;
+            this.isQueryParam = cp.isQueryParam;
+            this.required = cp.required;
+            this.defaultValue = cp.defaultValue;
+            this.isEnum = cp.isEnum;
+            this.datatypeWithEnum = cp.datatypeWithEnum;
+            this.dataType = cp.dataType;
+            this.paramName = cp.paramName;
+            this.hasMore = cp.hasMore;
+
+            // set cds specific properties
+            if (cp.vendorExtensions != null) {
+                String cdsType = (String)cp.vendorExtensions.get("x-cds-type");
+                if (!StringUtils.isBlank(cdsType)) {
+                    this.cdsTypeAnnotation = buildCdsTypeAnnotation(cdsType);
+                    this.isCdsType = true;
+                }
+            }
+        }
+
+        private String buildCdsTypeAnnotation(String cdsType) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("@CDSDataType(CustomDataType.").append(cdsType.replace("String", "")).append(")");
+            return sb.toString();
         }
     }
 }

@@ -66,21 +66,8 @@ public interface {{classname}}  {
             defaultValue = "{{{defaultValue}}}"{{/defaultValue}}{{#isRequired}},
             required = true{{/isRequired}}{{#isReference}},
             reference = "{{referenceName}}"{{/isReference}}
-        ){{#hasCdsType}}{{#isDateTimeString}}
-            @CDSDataType(CustomDataType.DateTime){{/isDateTimeString}}{{#isDateString}}
-            @CDSDataType(CustomDataType.Date){{/isDateString}}{{#isAcnString}}
-            @CDSDataType(CustomDataType.ACN){{/isAcnString}}{{#isAbnString}}
-            @CDSDataType(CustomDataType.ABN){{/isAbnString}}{{#isRateString}}
-            @CDSDataType(CustomDataType.Rate){{/isRateString}}{{#isMaskedPANString}}
-            @CDSDataType(CustomDataType.MaskedPAN){{/isMaskedPANString}}{{#isMaskedAccountString}}
-            @CDSDataType(CustomDataType.MaskedAccount){{/isMaskedAccountString}}{{#isURIString}}
-            @CDSDataType(CustomDataType.URI){{/isURIString}}{{#isAsciiString}}
-            @CDSDataType(CustomDataType.ASCII){{/isAsciiString}}{{#isAmountString}}
-            @CDSDataType(CustomDataType.Amount){{/isAmountString}}{{#isCurrencyString}}
-            @CDSDataType(CustomDataType.Currency){{/isCurrencyString}}{{#isNaturalNumber}}
-            @CDSDataType(CustomDataType.NaturalNumber){{/isNaturalNumber}}{{#isPositiveInteger}}
-            @CDSDataType(CustomDataType.PositiveInteger)(Format.PositiveInteger){{/isPositiveInteger}}{{#isNegativeInteger}}
-            @CDSDataType(CustomDataType.NegativeInteger){{/isNegativeInteger}}{{/hasCdsType}}
+        ){{#isCdsType}}
+        {{cdsTypeAnnotation}}{{/isCdsType}}
         {{#isEnum}}Param{{datatypeWithEnum}}{{/isEnum}}{{^isEnum}}{{dataType}}{{/isEnum}} {{paramName}}{{#hasMore}}, {{/hasMore}}{{/allParams}}
     );{{/hasParams}}
     {{#hasMore}}
