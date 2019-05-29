@@ -22,7 +22,7 @@ import {{modelPackage}}.*;
     @Section(name = "{{classname}}", tags = {"{{classname}}"})
     public interface {{classname}}  {
 
-    {{#operation}}{{#subresourceOperation}}
+    {{#operation}}
         @Endpoint(
         path = "{{{baseName}}}",
         summary = "{{ summary }}",
@@ -87,7 +87,7 @@ import {{modelPackage}}.*;
                 @CDSDataType(CustomDataType.NegativeInteger){{/isNegativeInteger}}{{/hasCdsType}}
             {{#isEnum}}Param{{datatypeWithEnum}}{{/isEnum}}{{^isEnum}}{{dataType}}{{/isEnum}} {{paramName}}{{#hasMore}}, {{/hasMore}}
         {{/allParams}});
-    {{/subresourceOperation}}{{/operation}}
+    {{/operation}}
 {{/operations}}
 }
 

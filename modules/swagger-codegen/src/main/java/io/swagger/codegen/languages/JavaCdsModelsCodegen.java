@@ -43,15 +43,34 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     public void addOperationToGroup(String tag, String resourcePath, Operation operation, CodegenOperation co,
                                     Map<String, List<CodegenOperation>> operations) {
 
-        if (tag.equals("Customer")) {
-            tag = "CommonCustomerAPI";
-        } else {
-            tag = "Banking" + tag + "API";
+        String groupTag = getGroupTag(co);
+        List<CodegenOperation> group = operations.get(groupTag);
+        if (!contains(group, co)) {
+            super.addOperationToGroup(groupTag, resourcePath, operation, co, operations);
+            co.baseName = null;
         }
-        co.subresourceOperation = true;
+    }
 
-        super.addOperationToGroup(tag, resourcePath, operation, co, operations);
-        co.baseName = resourcePath;
+    private boolean contains(List<CodegenOperation> group, CodegenOperation co) {
+        if (group == null || group.isEmpty()) return false;
+        for (CodegenOperation o : group) {
+            if (o.operationId.equals(co.operationId) && o.httpMethod.equals(co.httpMethod)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String getGroupTag(CodegenOperation co) {
+        String groupName = co.tags.get(0).getName();
+        String subGroupName = co.tags.get(1).getName();
+        String[] parts = groupName.split(" ");
+        return parts[0] + sanitizeName(subGroupName).replace("_", "") + parts[1];
+    }
+
+    @Override
+    public String toApiName(String name) {
+        return name;
     }
 
     @Override
