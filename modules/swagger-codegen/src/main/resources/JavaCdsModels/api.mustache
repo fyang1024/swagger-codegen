@@ -58,10 +58,9 @@ public interface {{classname}}  {
         {{#value}}@CustomAttribute(name = "{{key}}", value = "{{.}}", multiple = true){{^-last}},{{/-last}}{{/value}}{{/value.length}}{{#value.length}}@CustomAttribute(name = "{{key}}", value = "{{value}}"){{/value.length}}{{^-last}}{{^value.empty}},
         {{/value.empty}}{{/-last}}{{#-last}}
     {{closeBracket}}){{/-last}}{{/cdsExtensionSet}}
-    {{returnBaseType}}{{^returnBaseType}}Void{{/returnBaseType}} {{operationId}}({{#allParams}}
-        @Param({{^isBodyParam}}
-            name = "{{paramQueryName}}",{{/isBodyParam}}{{#isBodyParam}}
-            name = "{{paramName}}",{{/isBodyParam}}
+    {{returnType}} {{operationId}}({{^hasParams}});{{/hasParams}}{{#hasParams}}{{#allParams}}
+        @Param(
+            name = "{{baseName}}",
             description = "{{description}}",
             in = {{#isHeaderParam}}ParamLocation.HEADER{{/isHeaderParam}}{{#isPathParam}}ParamLocation.PATH{{/isPathParam}}{{#isQueryParam}}ParamLocation.QUERY{{/isQueryParam}}{{#isBodyParam}}ParamLocation.BODY{{/isBodyParam}}{{#defaultValue}},
             defaultValue = "{{{defaultValue}}}"{{/defaultValue}}{{#isRequired}},
@@ -83,7 +82,7 @@ public interface {{classname}}  {
             @CDSDataType(CustomDataType.PositiveInteger)(Format.PositiveInteger){{/isPositiveInteger}}{{#isNegativeInteger}}
             @CDSDataType(CustomDataType.NegativeInteger){{/isNegativeInteger}}{{/hasCdsType}}
         {{#isEnum}}Param{{datatypeWithEnum}}{{/isEnum}}{{^isEnum}}{{dataType}}{{/isEnum}} {{paramName}}{{#hasMore}}, {{/hasMore}}{{/allParams}}
-    );
+    );{{/hasParams}}
     {{#hasMore}}
 
     {{/hasMore}}

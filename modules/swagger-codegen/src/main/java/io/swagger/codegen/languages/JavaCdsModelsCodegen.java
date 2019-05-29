@@ -102,56 +102,36 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         return objs;
     }
 
-    public static class CdsCodegenOperation extends CodegenOperation {
+    private static class CdsCodegenOperation extends CodegenOperation {
         public boolean hasCdsScopes;
         public Object cdsScopes;
         public Set<Map.Entry<String, Object>> cdsExtensionSet;
 
         public CdsCodegenOperation(CodegenOperation co) {
 
-            // Copy all fields of CodegenOperation
+            // Copy relevant fields of CodegenOperation
             this.responseHeaders.addAll(co.responseHeaders);
             this.hasAuthMethods = co.hasAuthMethods;
             this.hasConsumes = co.hasConsumes;
             this.hasProduces = co.hasProduces;
             this.hasParams = co.hasParams;
-            this.hasOptionalParams = co.hasOptionalParams;
             this.returnTypeIsPrimitive = co.returnTypeIsPrimitive;
             this.returnSimpleType = co.returnSimpleType;
-            this.subresourceOperation = co.subresourceOperation;
             this.isMapContainer = co.isMapContainer;
             this.isListContainer = co.isListContainer;
-            this.isMultipart = co.isMultipart;
             this.hasMore = co.hasMore;
-            this.isResponseBinary = co.isResponseBinary;
             this.hasReference = co.hasReference;
-            this.isRestfulIndex = co.isRestfulIndex;
-            this.isRestfulShow = co.isRestfulShow;
-            this.isRestfulCreate = co.isRestfulCreate;
-            this.isRestfulUpdate = co.isRestfulUpdate;
-            this.isRestfulDestroy = co.isRestfulDestroy;
-            this.isRestful = co.isRestful;
             this.path = co.path;
             this.operationId = co.operationId;
             this.returnType = co.returnType;
             this.httpMethod = co.httpMethod;
             this.returnBaseType = co.returnBaseType;
-            this.returnContainer = co.returnContainer;
             this.summary = co.summary;
-            this.unescapedNotes = co.unescapedNotes;
             this.notes = co.notes;
             this.baseName = co.baseName;
             this.defaultResponse = co.defaultResponse;
             this.discriminator = co.discriminator;
-            this.consumes = co.consumes;
-            this.produces = co.produces;
-            this.bodyParam = co.bodyParam;
             this.allParams = co.allParams;
-            this.bodyParams = co.bodyParams;
-            this.pathParams = co.pathParams;
-            this.queryParams = co.queryParams;
-            this.headerParams = co.headerParams;
-            this.formParams = co.formParams;
             this.authMethods = co.authMethods;
             this.tags = co.tags;
             this.responses = co.responses;
