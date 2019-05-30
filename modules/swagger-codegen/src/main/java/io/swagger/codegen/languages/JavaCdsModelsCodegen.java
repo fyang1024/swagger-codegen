@@ -165,6 +165,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     @Override
     public void postProcessModelProperty(CodegenModel model, CodegenProperty property) {
         super.postProcessModelProperty(model, property);
+        property = new CdsCodegenProperty(property);
         if (property.datatype.equals("Meta") || property.datatype.equals("Links")) {
             property.isInherited = true;
         } else if (property.datatype.equals("MetaPaginated") || property.datatype.equals("LinksPaginated")) {
@@ -178,9 +179,10 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         if (model.getProperties() != null) {
             Property property = model.getProperties().get("links");
             if (property != null) {
-                if (property.getType().equals("Links")) {
+                RefProperty refProperty = (RefProperty)property;
+                if (refProperty.getSimpleRef().equals("Links")) {
                     codegenModel.isBaseResponse = true;
-                } else if (property.getType().equals("LinksPaginated")) {
+                } else if (refProperty.getSimpleRef().equals("LinksPaginated")) {
                     codegenModel.isPaginatedResponse = true;
                 }
             }
@@ -204,6 +206,23 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         objs.put("openBracket", "{");
         objs.put("closeBracket", "}");
         return objs;
+    }
+
+    @Override
+    public Map<String, Object> postProcessModels(Map<String, Object> objs) {
+        super.postProcessModels(objs);
+        objs.put("openBracket", "{");
+        objs.put("closeBracket", "}");
+        return objs;
+    }
+
+    @Override
+    public String toEnumName(CodegenProperty property) {
+        return sanitizeName(camelize(property.name));
+    }
+
+    private String buildCdsTypeAnnotation(String cdsType) {
+        return "@CDSDataType(CustomDataType." + cdsType.replace("String", "") + ")";
     }
 
     private class CdsCodegenOperation extends CodegenOperation {
@@ -292,9 +311,6 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             }
         }
 
-        private String buildCdsTypeAnnotation(String cdsType) {
-            return "@CDSDataType(CustomDataType." + cdsType.replace("String", "") + ")";
-        }
     }
 
     private class CdsCodegenModel extends CodegenModel {
@@ -306,34 +322,24 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
 
         public CdsCodegenModel(CodegenModel cm) {
 
-            // Copy all fields of CodegenModel
-            this.parent = cm.parent;
-            this.parentSchema = cm.parentSchema;
-            this.parentModel = cm.parentModel;
-            this.interfaceModels = cm.interfaceModels;
-            this.children = cm.children;
+            // Copy relevant fields of CodegenModel
             this.name = cm.name;
             this.classname = cm.classname;
-            this.title = cm.title;
+            this.interfaces = cm.interfaces;
             this.description = cm.description;
             this.classVarName = cm.classVarName;
             this.dataType = cm.dataType;
             this.classFilename = cm.classFilename;
             this.unescapedDescription = cm.unescapedDescription;
-            this.discriminator = cm.discriminator;
             this.defaultValue = cm.defaultValue;
             this.arrayModelType = cm.arrayModelType;
-            this.isAlias = cm.isAlias;
             this.vars = cm.vars;
-            this.allVars = cm.allVars;
-            this.parentVars = cm.parentVars;
+            this.requiredVars = cm.requiredVars;
+            this.optionalVars = cm.optionalVars;
             this.allowableValues = cm.allowableValues;
             this.mandatory = cm.mandatory;
             this.allMandatory = cm.allMandatory;
             this.imports = cm.imports;
-            this.hasVars = cm.hasVars;
-            this.emptyVars = cm.emptyVars;
-            this.hasMoreModels = cm.hasMoreModels;
             this.hasEnums = cm.hasEnums;
             this.isEnum = cm.isEnum;
             this.isArrayModel = cm.isArrayModel;
@@ -349,6 +355,31 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
 
         public Set<Map.Entry<String, Object>> getCdsExtensionSet() {
             return vendorExtensions.entrySet();
+        }
+    }
+
+    private class CdsCodegenProperty extends CodegenProperty {
+        public String cdsTypeAnnotation;
+        public boolean isCdsType;
+
+        public CdsCodegenProperty(CodegenProperty cp) {
+
+            // Copy relevant fields of CodegenProperty
+            this.description = cp.description;
+            this.datatype = cp.datatype;
+            this.datatypeWithEnum = cp.datatypeWithEnum;
+            this.isContainer = cp.isContainer;
+            this.required = cp.required;
+            this.baseName = cp.baseName;
+            this.vendorExtensions = cp.vendorExtensions;
+
+            if (cp.vendorExtensions != null) {
+                String cdsType = (String)cp.vendorExtensions.get("x-cds-type");
+                if (!StringUtils.isBlank(cdsType)) {
+                    this.cdsTypeAnnotation = buildCdsTypeAnnotation(cdsType);
+                    this.isCdsType = true;
+                }
+            }
         }
     }
 }

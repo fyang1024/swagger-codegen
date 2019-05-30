@@ -3,9 +3,10 @@ package {{package}};
 import au.org.consumerdatastandards.support.data.*;
 import java.util.List;
 import java.math.BigDecimal;
-{{#models}}{{#model}}{{#isResponse}}
-    import au.org.consumerdatastandards.api.common.responses.BaseResponse;
-    import au.org.consumerdatastandards.api.common.responses.PaginatedResponse;
-{{/isResponse}}{{#isEnum}}{{>enumOuterClass}}{{/isEnum}}
+{{#models}}{{#model}}{{#isBaseResponse}}
+import au.org.consumerdatastandards.api.common.responses.BaseResponse;
+{{/isBaseResponse}}{{#isPaginatedResponse}}
+import au.org.consumerdatastandards.api.common.responses.PaginatedResponse;
+{{/isPaginatedResponse}}{{#isEnum}}{{>enumOuterClass}}{{/isEnum}}
 {{^isEnum}}{{>pojo}}{{/isEnum}}
 {{/model}}{{/models}}

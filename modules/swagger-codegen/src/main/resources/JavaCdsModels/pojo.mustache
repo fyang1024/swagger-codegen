@@ -8,41 +8,42 @@
     {{/-last}}{{/value}}{{/value.length}}{{#value.length}}@CustomAttribute(name = "{{key}}", value = "{{value}}"){{/value.length}}{{^-last}}{{^value.empty}},
     {{/value.empty}}{{/-last}}{{#-last}}
 {{closeBracket}}){{/-last}}{{/cdsExtensionSet}}
-public class {{classname}} {{#isResponse}}extends {{#isPaginated}}PaginatedResponse{{/isPaginated}}{{^isPaginated}}BaseResponse{{/isPaginated}}{{/isResponse}} {
+public class {{classname}}{{#isPaginatedResponse}} extends PaginatedResponse{{/isPaginatedResponse}}{{#isBaseResponse}} extends BaseResponse{{/isBaseResponse}} {
 {{#vars}}
     {{#isEnum}}
-        {{^isContainer}}
-            {{>enumClass}}
-        {{/isContainer}}
+    {{^isContainer}}
+
+{{>enumClass}}
+    {{/isContainer}}
     {{/isEnum}}
     {{#items.isEnum}}
-        {{#items}}
-            {{^isContainer}}
-                {{>enumClass}}
-            {{/isContainer}}
-        {{/items}}
-    {{/items.isEnum}}
-    {{^isInherited}}
-        @Property(
-        description = "{{{description}}}",
-        required = {{#required}}true{{/required}}{{^required}}false{{/required}}
-        ){{#hasCdsType}}{{#isDateTimeString}}
-            @CDSDataType(CustomDataType.DateTime){{/isDateTimeString}}{{#isDateString}}
-            @CDSDataType(CustomDataType.Date){{/isDateString}}{{#isAcnString}}
-            @CDSDataType(CustomDataType.ACN){{/isAcnString}}{{#isAbnString}}
-            @CDSDataType(CustomDataType.ABN){{/isAbnString}}{{#isRateString}}
-            @CDSDataType(CustomDataType.Rate){{/isRateString}}{{#isMaskedPANString}}
-            @CDSDataType(CustomDataType.MaskedPAN){{/isMaskedPANString}}{{#isMaskedAccountString}}
-            @CDSDataType(CustomDataType.MaskedAccount){{/isMaskedAccountString}}{{#isURIString}}
-            @CDSDataType(CustomDataType.URI){{/isURIString}}{{#isAsciiString}}
-            @CDSDataType(CustomDataType.ASCII){{/isAsciiString}}{{#isAmountString}}
-            @CDSDataType(CustomDataType.Amount){{/isAmountString}}{{#isCurrencyString}}
-            @CDSDataType(CustomDataType.Currency){{/isCurrencyString}}{{#isNaturalNumber}}
-            @CDSDataType(CustomDataType.NaturalNumber){{/isNaturalNumber}}{{#isPositiveInteger}}
-            @CDSDataType(CustomDataType.PositiveInteger)(Format.PositiveInteger){{/isPositiveInteger}}{{#isNegativeInteger}}
-            @CDSDataType(CustomDataType.NegativeInteger){{/isNegativeInteger}}{{/hasCdsType}}
-        {{{datatypeWithEnum}}} {{baseName}};
+    {{#items}}
+    {{^isContainer}}
 
-    {{/isInherited}}
+{{>enumClass}}
+    {{/isContainer}}
+    {{/items}}
+    {{/items.isEnum}}
 {{/vars}}
+{{#requiredVars}}
+    {{^isInherited}}
+
+    @Property({{#description}}
+        description = "{{{description}}}",{{/description}}
+        required = true
+    ){{#isCdsType}}
+    {{cdsTypeAnnotation}}{{/isCdsType}}
+    {{{datatype}}} {{baseName}};
+    {{/isInherited}}
+{{/requiredVars}}
+{{#optionalVars}}
+    {{^isInherited}}
+
+    @Property(
+        description = "{{{description}}}",
+    ){{#isCdsType}}
+    {{cdsTypeAnnotation}}{{/isCdsType}}
+    {{{datatypeWithEnum}}} {{baseName}};
+    {{/isInherited}}
+{{/optionalVars}}
 }{{/model}}{{/models}}
