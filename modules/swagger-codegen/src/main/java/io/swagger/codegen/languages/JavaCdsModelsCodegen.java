@@ -164,7 +164,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         public boolean isReference;
         public String referenceName;
 
-        public CdsCodegenParameter(CodegenParameter cp) {
+        CdsCodegenParameter(CodegenParameter cp) {
 
             // copy relevant fields of CodegenParameter
             this.baseName = cp.baseName;
@@ -196,9 +196,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         }
 
         private String buildCdsTypeAnnotation(String cdsType) {
-            StringBuilder sb = new StringBuilder();
-            sb.append("@CDSDataType(CustomDataType.").append(cdsType.replace("String", "")).append(")");
-            return sb.toString();
+            return "@CDSDataType(CustomDataType." + cdsType.replace("String", "") + ")";
         }
     }
 }
