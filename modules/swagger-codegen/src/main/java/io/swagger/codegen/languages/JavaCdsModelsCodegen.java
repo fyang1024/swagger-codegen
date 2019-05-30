@@ -2,21 +2,21 @@ package io.swagger.codegen.languages;
 
 import io.swagger.codegen.*;
 import io.swagger.codegen.mustache.UppercaseLambda;
-import io.swagger.models.Operation;
-import io.swagger.models.Swagger;
-import io.swagger.models.Tag;
+import io.swagger.models.*;
+import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.parameters.Parameter;
+import io.swagger.models.properties.ArrayProperty;
+import io.swagger.models.properties.Property;
+import io.swagger.models.properties.RefProperty;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
 
     private Map<String, String> refParameters = new HashMap<>();
+    private Set<String> refModels = new HashSet<>();
 
     public JavaCdsModelsCodegen() {
 
@@ -78,8 +78,82 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     @Override
     public void preprocessSwagger(Swagger swagger) {
         super.preprocessSwagger(swagger);
+        preprocessParameters(swagger);
+        preprocessModels(swagger);
+        preprocessPaths(swagger);
+    }
+
+    private void preprocessPaths(Swagger swagger) {
+        for (Path path : swagger.getPaths().values()) {
+            preprocessPath(path);
+        }
+    }
+
+    private void preprocessPath(Path path) {
+        for(Operation operation : path.getOperations()){
+            preprocessOperation(operation);
+        }
+    }
+
+    private void preprocessOperation(Operation operation) {
+        for (Parameter parameter : operation.getParameters()) {
+            if (parameter instanceof BodyParameter) {
+                Model schema = ((BodyParameter) parameter).getSchema();
+                if (schema instanceof RefModel) {
+                    refModels.add(((RefModel)schema).getSimpleRef());
+                }
+            }
+        }
+        for (Response response : operation.getResponses().values()) {
+            if (response.getResponseSchema() instanceof RefModel) {
+                refModels.add(((RefModel) response.getResponseSchema()).getSimpleRef());
+            }
+        }
+    }
+
+    private void preprocessModels(Swagger swagger) {
+        for (Model model : swagger.getDefinitions().values()) {
+            if (model instanceof ComposedModel) {
+                ComposedModel composedModel = (ComposedModel) model;
+                preprocessComposedModel(composedModel);
+            }
+            preprocessProperties(model);
+        }
+    }
+
+    private void preprocessComposedModel(ComposedModel composedModel) {
+        for (RefModel refModel : composedModel.getInterfaces()) {
+            refModels.add(refModel.getSimpleRef());
+        }
+        Model parent = composedModel.getParent();
+        if (parent instanceof RefModel) {
+            refModels.add(((RefModel) parent).getSimpleRef());
+        }
+        Model child = composedModel.getChild();
+        if (child instanceof RefModel) {
+            refModels.add(((RefModel) child).getSimpleRef());
+        }
+    }
+
+    private void preprocessProperties(Model model) {
+        if (model.getProperties() != null) {
+            for (Map.Entry<String, Property> entry : model.getProperties().entrySet()) {
+                if (entry.getValue() instanceof RefProperty) {
+                    refModels.add(((RefProperty) entry.getValue()).getSimpleRef());
+                } else if (entry.getValue() instanceof ArrayProperty) {
+                    ArrayProperty ap = (ArrayProperty)entry.getValue();
+                    if (ap.getItems() instanceof RefProperty) {
+                        refModels.add(((RefProperty) ap.getItems()).getSimpleRef());
+                    }
+                }
+            }
+        }
+    }
+
+    private void preprocessParameters(Swagger swagger) {
         for(Map.Entry<String, Parameter> entry : swagger.getParameters().entrySet()) {
             refParameters.put(entry.getValue().getName(), entry.getKey());
+            refModels.add(entry.getKey());
         }
     }
 
@@ -91,12 +165,31 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     @Override
     public void postProcessModelProperty(CodegenModel model, CodegenProperty property) {
         super.postProcessModelProperty(model, property);
-
         if (property.datatype.equals("Meta") || property.datatype.equals("Links")) {
             property.isInherited = true;
         } else if (property.datatype.equals("MetaPaginated") || property.datatype.equals("LinksPaginated")) {
             property.isInherited = true;
         }
+    }
+
+    @Override
+    public CodegenModel fromModel(String name, Model model, Map<String, Model> allDefinitions) {
+        CdsCodegenModel codegenModel = new CdsCodegenModel(super.fromModel(name, model, allDefinitions));
+        if (model.getProperties() != null) {
+            Property property = model.getProperties().get("links");
+            if (property != null) {
+                if (property.getType().equals("Links")) {
+                    codegenModel.isBaseResponse = true;
+                } else if (property.getType().equals("LinksPaginated")) {
+                    codegenModel.isPaginatedResponse = true;
+                }
+            }
+        }
+        if (model instanceof ComposedModel) {
+            Model child = ((ComposedModel) model).getChild();
+            codegenModel.vendorExtensions.putAll(child.getVendorExtensions());
+        }
+        return codegenModel;
     }
 
     @Override
@@ -143,6 +236,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             this.defaultResponse = co.defaultResponse;
             this.discriminator = co.discriminator;
             this.allParams = co.allParams.stream().map(CdsCodegenParameter::new).collect(Collectors.toList());
+            this.vendorExtensions = co.vendorExtensions;
             this.authMethods = co.authMethods;
             this.tags = co.tags;
             this.responses = co.responses;
@@ -153,8 +247,11 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             // set cds specific properties
             this.cdsScopes = co.vendorExtensions.get("x-scopes");
             this.hasCdsScopes = cdsScopes != null && !((List)cdsScopes).isEmpty();
-            co.vendorExtensions.remove("x-accepts");
-            this.cdsExtensionSet = co.vendorExtensions.entrySet();
+            this.vendorExtensions.remove("x-accepts");
+        }
+
+        public Set<Map.Entry<String, Object>> getCdsExtensionSet() {
+            return vendorExtensions.entrySet();
         }
     }
 
@@ -197,6 +294,61 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
 
         private String buildCdsTypeAnnotation(String cdsType) {
             return "@CDSDataType(CustomDataType." + cdsType.replace("String", "") + ")";
+        }
+    }
+
+    private class CdsCodegenModel extends CodegenModel {
+
+        public boolean isSimple;
+        public boolean isReferenced;
+        public boolean isBaseResponse;
+        public boolean isPaginatedResponse;
+
+        public CdsCodegenModel(CodegenModel cm) {
+
+            // Copy all fields of CodegenModel
+            this.parent = cm.parent;
+            this.parentSchema = cm.parentSchema;
+            this.parentModel = cm.parentModel;
+            this.interfaceModels = cm.interfaceModels;
+            this.children = cm.children;
+            this.name = cm.name;
+            this.classname = cm.classname;
+            this.title = cm.title;
+            this.description = cm.description;
+            this.classVarName = cm.classVarName;
+            this.dataType = cm.dataType;
+            this.classFilename = cm.classFilename;
+            this.unescapedDescription = cm.unescapedDescription;
+            this.discriminator = cm.discriminator;
+            this.defaultValue = cm.defaultValue;
+            this.arrayModelType = cm.arrayModelType;
+            this.isAlias = cm.isAlias;
+            this.vars = cm.vars;
+            this.allVars = cm.allVars;
+            this.parentVars = cm.parentVars;
+            this.allowableValues = cm.allowableValues;
+            this.mandatory = cm.mandatory;
+            this.allMandatory = cm.allMandatory;
+            this.imports = cm.imports;
+            this.hasVars = cm.hasVars;
+            this.emptyVars = cm.emptyVars;
+            this.hasMoreModels = cm.hasMoreModels;
+            this.hasEnums = cm.hasEnums;
+            this.isEnum = cm.isEnum;
+            this.isArrayModel = cm.isArrayModel;
+            this.hasChildren = cm.hasChildren;
+            this.externalDocs = cm.externalDocs;
+            this.vendorExtensions = cm.vendorExtensions;
+
+            // set cds specific properties
+            this.isReferenced = refModels.contains(this.classname);
+            this.isSimple = (this.interfaces == null || this.interfaces.isEmpty())
+                && StringUtils.isBlank(this.description) && this.isReferenced;
+        }
+
+        public Set<Map.Entry<String, Object>> getCdsExtensionSet() {
+            return vendorExtensions.entrySet();
         }
     }
 }

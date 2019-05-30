@@ -1,12 +1,13 @@
-{{#models}}{{#model}}@DataDefinition({{#hasInterfaces}}
-    allOf = { {{#interfaces}}{{.}}.class{{^-last}}, {{/-last}}{{/interfaces}} }{{#description}},{{/description}}{{/hasInterfaces}}{{#isInline}}
-    referenced = false{{#description}},{{/description}}
-{{/isInline}}{{#description}}    description = "{{{description}}}"
-{{/description}})
-{{#vendorExtensions.x-conditional}}{{#-first}}@CustomAttributes({
-{{/-first}}    @CustomAttribute(name = "x-conditional", value = "{{{.}}}", multiple = true){{^-last}},
-{{/-last}}{{#-last}}
-    }) {{/-last}}{{/vendorExtensions.x-conditional}}
+{{#models}}{{#model}}@DataDefinition{{^isSimple}}({{#interfaces.size}}
+    allOf = { {{#interfaces}}{{.}}.class{{^-last}}, {{/-last}}{{/interfaces}} }{{#description}},{{/description}}{{/interfaces.size}}{{^isReferenced}}
+    referenced = false{{#description}},{{/description}}{{/isReferenced}}{{#description}}
+    description = "{{{description}}}"{{/description}}
+){{/isSimple}}{{#cdsExtensionSet}}{{#-first}}
+@CustomAttributes({{openBracket}}{{/-first}}{{^value.length}}
+    {{#value}}@CustomAttribute(name = "{{key}}", value = "{{.}}", multiple = true){{^-last}},
+    {{/-last}}{{/value}}{{/value.length}}{{#value.length}}@CustomAttribute(name = "{{key}}", value = "{{value}}"){{/value.length}}{{^-last}}{{^value.empty}},
+    {{/value.empty}}{{/-last}}{{#-last}}
+{{closeBracket}}){{/-last}}{{/cdsExtensionSet}}
 public class {{classname}} {{#isResponse}}extends {{#isPaginated}}PaginatedResponse{{/isPaginated}}{{^isPaginated}}BaseResponse{{/isPaginated}}{{/isResponse}} {
 {{#vars}}
     {{#isEnum}}

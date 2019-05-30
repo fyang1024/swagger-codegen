@@ -55,7 +55,8 @@ public interface {{classname}}  {
         }{{/hasCdsScopes}}
     ){{#cdsExtensionSet}}{{#-first}}
     @CustomAttributes({{openBracket}}{{/-first}}{{^value.length}}
-        {{#value}}@CustomAttribute(name = "{{key}}", value = "{{.}}", multiple = true){{^-last}},{{/-last}}{{/value}}{{/value.length}}{{#value.length}}@CustomAttribute(name = "{{key}}", value = "{{value}}"){{/value.length}}{{^-last}}{{^value.empty}},
+        {{#value}}@CustomAttribute(name = "{{key}}", value = "{{.}}", multiple = true){{^-last}},
+        {{/-last}}{{/value}}{{/value.length}}{{#value.length}}@CustomAttribute(name = "{{key}}", value = "{{value}}"){{/value.length}}{{^-last}}{{^value.empty}},
         {{/value.empty}}{{/-last}}{{#-last}}
     {{closeBracket}}){{/-last}}{{/cdsExtensionSet}}
     {{returnType}} {{operationId}}({{^hasParams}});{{/hasParams}}{{#hasParams}}{{#allParams}}
