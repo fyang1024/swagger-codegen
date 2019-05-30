@@ -3,15 +3,20 @@ package io.swagger.codegen.languages;
 import io.swagger.codegen.*;
 import io.swagger.codegen.mustache.UppercaseLambda;
 import io.swagger.models.Operation;
+import io.swagger.models.Swagger;
 import io.swagger.models.Tag;
+import io.swagger.models.parameters.Parameter;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
+
+    private Map<String, String> refParameters = new HashMap<>();
 
     public JavaCdsModelsCodegen() {
 
@@ -71,6 +76,14 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     }
 
     @Override
+    public void preprocessSwagger(Swagger swagger) {
+        super.preprocessSwagger(swagger);
+        for(Map.Entry<String, Parameter> entry : swagger.getParameters().entrySet()) {
+            refParameters.put(entry.getValue().getName(), entry.getKey());
+        }
+    }
+
+    @Override
     public String toApiName(String name) {
         return name;
     }
@@ -100,7 +113,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         return objs;
     }
 
-    private static class CdsCodegenOperation extends CodegenOperation {
+    private class CdsCodegenOperation extends CodegenOperation {
         public boolean hasCdsScopes;
         public Object cdsScopes;
         public Set<Map.Entry<String, Object>> cdsExtensionSet;
@@ -145,9 +158,11 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         }
     }
 
-    private static class CdsCodegenParameter extends CodegenParameter {
+    private class CdsCodegenParameter extends CodegenParameter {
         public String cdsTypeAnnotation;
         public boolean isCdsType;
+        public boolean isReference;
+        public String referenceName;
 
         public CdsCodegenParameter(CodegenParameter cp) {
 
@@ -169,6 +184,8 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             this.hasMore = cp.hasMore;
 
             // set cds specific properties
+            this.isReference = refParameters.containsKey(this.baseName);
+            this.referenceName = refParameters.get(this.baseName);
             if (cp.vendorExtensions != null) {
                 String cdsType = (String)cp.vendorExtensions.get("x-cds-type");
                 if (!StringUtils.isBlank(cdsType)) {
