@@ -33,7 +33,7 @@ public class {{classname}}{{#isPaginatedResponse}} extends PaginatedResponse{{/i
         required = true
     ){{#isCdsType}}
     {{cdsTypeAnnotation}}{{/isCdsType}}
-    {{{datatype}}} {{baseName}}{{#defaultValueVisible}} = {{defaultValue}}{{/defaultValueVisible}};
+    {{{datatype}}} {{baseName}}{{#isDefaultValueVisible}} = {{defaultValue}}{{/isDefaultValueVisible}};
     {{/isInherited}}
 {{/requiredVars}}
 {{#optionalVars}}
@@ -43,7 +43,7 @@ public class {{classname}}{{#isPaginatedResponse}} extends PaginatedResponse{{/i
         description = "{{{description}}}",
     ){{/description}}{{#isCdsType}}
     {{cdsTypeAnnotation}}{{/isCdsType}}
-    {{{datatype}}} {{baseName}}{{#defaultValueVisible}} = {{defaultValue}}{{/defaultValueVisible}};
+    {{{datatype}}} {{baseName}}{{#isDefaultValueVisible}} = {{defaultValue}}{{/isDefaultValueVisible}};
     {{/isInherited}}
 {{/optionalVars}}
 }{{/model}}{{/models}}

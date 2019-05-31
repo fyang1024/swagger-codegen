@@ -106,7 +106,6 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
                 if (sp.getEnum() != null) {
                     String referenceName = refParameters.get(sp.getName());
                     if (referenceName != null) {
-                        System.out.println(sp.getDescription());
                         ModelImpl enumModel = new ModelImpl().type(StringProperty.TYPE)._enum(sp.getEnum());
                         enumModel.setDescription(sp.getDescription());
                         swagger.getDefinitions().put(referenceName, enumModel);
@@ -186,18 +185,31 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
 
     @Override
     public void postProcessModelProperty(CodegenModel model, CodegenProperty property) {
-        super.postProcessModelProperty(model, property);
-        property = new CdsCodegenProperty(property);
-        if (property.datatype.equals("Meta") || property.datatype.equals("Links")) {
-            property.isInherited = true;
-        } else if (property.datatype.equals("MetaPaginated") || property.datatype.equals("LinksPaginated")) {
-            property.isInherited = true;
+        CdsCodegenProperty cdsCodegenProperty = new CdsCodegenProperty(property);
+        replaceProperty(model, cdsCodegenProperty);
+        if (cdsCodegenProperty.datatype.equals("Meta") || cdsCodegenProperty.datatype.equals("Links")) {
+            cdsCodegenProperty.isInherited = true;
+        } else if (cdsCodegenProperty.datatype.equals("MetaPaginated") || cdsCodegenProperty.datatype.equals("LinksPaginated")) {
+            cdsCodegenProperty.isInherited = true;
         }
-        if (!property.defaultValue.equals("null") &&
-            !StringUtils.isBlank(property.defaultValue) &&
-            !property.defaultValue.startsWith("new ")) {
-            System.out.println(property.defaultValue);
-            ((CdsCodegenProperty)property).isDefaultValueVisible = true;
+        if (!cdsCodegenProperty.defaultValue.equals("null") &&
+            !StringUtils.isBlank(cdsCodegenProperty.defaultValue) &&
+            !cdsCodegenProperty.defaultValue.startsWith("new ")) {
+            cdsCodegenProperty.isDefaultValueVisible = true;
+        }
+    }
+
+    private void replaceProperty(CodegenModel model, CodegenProperty property) {
+        replaceProperty(model.vars, property);
+        replaceProperty(model.requiredVars, property);
+        replaceProperty(model.optionalVars, property);
+    }
+
+    private void replaceProperty(List<CodegenProperty> properties, CodegenProperty property) {
+        for (int i = 0; i < properties.size(); i++) {
+            if (properties.get(i).baseName.equals(property.baseName)) {
+                properties.set(i, property);
+            }
         }
     }
 
@@ -219,8 +231,6 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             Model child = ((ComposedModel) model).getChild();
             codegenModel.vendorExtensions.putAll(child.getVendorExtensions());
         }
-        codegenModel.imports.remove("ApiModelProperty");
-        codegenModel.imports.remove("ApiModel");
         return codegenModel;
     }
 
@@ -405,6 +415,9 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             this.baseName = cp.baseName;
             this.defaultValue = cp.defaultValue;
             this.isEnum = cp.isEnum;
+            this.enumName = cp.enumName;
+            this.items = cp.items;
+            this.allowableValues = cp.allowableValues;
             this.vendorExtensions = cp.vendorExtensions;
 
             // set cds specific properties
