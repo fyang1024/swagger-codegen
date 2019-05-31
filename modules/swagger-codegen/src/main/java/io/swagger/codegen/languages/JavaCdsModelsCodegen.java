@@ -193,6 +193,12 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         } else if (property.datatype.equals("MetaPaginated") || property.datatype.equals("LinksPaginated")) {
             property.isInherited = true;
         }
+        if (!property.defaultValue.equals("null") &&
+            !StringUtils.isBlank(property.defaultValue) &&
+            !property.defaultValue.startsWith("new ")) {
+            System.out.println(property.defaultValue);
+            ((CdsCodegenProperty)property).isDefaultValueVisible = true;
+        }
     }
 
     @Override
@@ -386,18 +392,22 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     private class CdsCodegenProperty extends CodegenProperty {
         public String cdsTypeAnnotation;
         public boolean isCdsType;
+        public boolean isDefaultValueVisible;
 
         public CdsCodegenProperty(CodegenProperty cp) {
 
-            // Copy relevant fields of CodegenProperty
+            // copy relevant fields of CodegenProperty
             this.description = cp.description;
             this.datatype = cp.datatype;
             this.datatypeWithEnum = cp.datatypeWithEnum;
             this.isContainer = cp.isContainer;
             this.required = cp.required;
             this.baseName = cp.baseName;
+            this.defaultValue = cp.defaultValue;
+            this.isEnum = cp.isEnum;
             this.vendorExtensions = cp.vendorExtensions;
 
+            // set cds specific properties
             if (cp.vendorExtensions != null) {
                 String cdsType = (String)cp.vendorExtensions.get("x-cds-type");
                 if (!StringUtils.isBlank(cdsType)) {
