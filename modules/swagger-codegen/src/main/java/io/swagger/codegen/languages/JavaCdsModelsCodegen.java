@@ -5,9 +5,11 @@ import io.swagger.codegen.mustache.UppercaseLambda;
 import io.swagger.models.*;
 import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.parameters.Parameter;
+import io.swagger.models.parameters.SerializableParameter;
 import io.swagger.models.properties.ArrayProperty;
 import io.swagger.models.properties.Property;
 import io.swagger.models.properties.RefProperty;
+import io.swagger.models.properties.StringProperty;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
@@ -15,6 +17,7 @@ import java.util.stream.Collectors;
 
 public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
 
+    private Swagger swagger = null;
     private Map<String, String> refParameters = new HashMap<>();
     private Set<String> refModels = new HashSet<>();
 
@@ -78,6 +81,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     @Override
     public void preprocessSwagger(Swagger swagger) {
         super.preprocessSwagger(swagger);
+        this.swagger = swagger;
         preprocessParameters(swagger);
         preprocessModels(swagger);
         preprocessPaths(swagger);
@@ -97,6 +101,18 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
 
     private void preprocessOperation(Operation operation) {
         for (Parameter parameter : operation.getParameters()) {
+            if (parameter instanceof SerializableParameter) {
+                SerializableParameter sp = (SerializableParameter) parameter;
+                if (sp.getEnum() != null) {
+                    String referenceName = refParameters.get(sp.getName());
+                    if (referenceName != null) {
+                        System.out.println(sp.getDescription());
+                        ModelImpl enumModel = new ModelImpl().type(StringProperty.TYPE)._enum(sp.getEnum());
+                        enumModel.setDescription(sp.getDescription());
+                        swagger.getDefinitions().put(referenceName, enumModel);
+                    }
+                }
+            }
             if (parameter instanceof BodyParameter) {
                 Model schema = ((BodyParameter) parameter).getSchema();
                 if (schema instanceof RefModel) {
@@ -197,6 +213,8 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             Model child = ((ComposedModel) model).getChild();
             codegenModel.vendorExtensions.putAll(child.getVendorExtensions());
         }
+        codegenModel.imports.remove("ApiModelProperty");
+        codegenModel.imports.remove("ApiModel");
         return codegenModel;
     }
 
@@ -301,6 +319,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             this.defaultValue = cp.defaultValue;
             this.isEnum = cp.isEnum;
             this.datatypeWithEnum = cp.datatypeWithEnum;
+            this.allowableValues = cp.allowableValues;
             this.dataType = cp.dataType;
             this.paramName = cp.paramName;
             this.hasMore = cp.hasMore;
@@ -308,9 +327,6 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             // set cds specific properties
             this.isReference = refParameters.containsKey(this.baseName);
             this.referenceName = refParameters.get(this.baseName);
-            if (this.isEnum && this.isReference) {
-                this.datatypeWithEnum = this.referenceName;
-            }
             if (cp.vendorExtensions != null) {
                 String cdsType = (String)cp.vendorExtensions.get("x-cds-type");
                 if (!StringUtils.isBlank(cdsType)) {

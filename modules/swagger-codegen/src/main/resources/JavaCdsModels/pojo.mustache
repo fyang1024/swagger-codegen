@@ -39,9 +39,9 @@ public class {{classname}}{{#isPaginatedResponse}} extends PaginatedResponse{{/i
 {{#optionalVars}}
     {{^isInherited}}
 
-    @Property(
+    @Property{{#description}}(
         description = "{{{description}}}",
-    ){{#isCdsType}}
+    ){{/description}}{{#isCdsType}}
     {{cdsTypeAnnotation}}{{/isCdsType}}
     {{{datatypeWithEnum}}} {{baseName}};
     {{/isInherited}}
