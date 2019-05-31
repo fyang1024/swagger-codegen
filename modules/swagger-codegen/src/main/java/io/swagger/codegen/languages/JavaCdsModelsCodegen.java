@@ -152,8 +152,14 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
 
     private void preprocessParameters(Swagger swagger) {
         for(Map.Entry<String, Parameter> entry : swagger.getParameters().entrySet()) {
-            refParameters.put(entry.getValue().getName(), entry.getKey());
-            refModels.add(entry.getKey());
+            Parameter parameter = entry.getValue();
+            String paramName = entry.getKey();
+            refParameters.put(parameter.getName(), paramName);
+            refModels.add(paramName);
+            if (parameter instanceof BodyParameter) {
+                BodyParameter bodyParameter = (BodyParameter) parameter;
+                System.out.println(paramName + " -> " + bodyParameter.getSchema());
+            }
         }
     }
 
@@ -302,6 +308,9 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             // set cds specific properties
             this.isReference = refParameters.containsKey(this.baseName);
             this.referenceName = refParameters.get(this.baseName);
+            if (this.isEnum && this.isReference) {
+                this.datatypeWithEnum = this.referenceName;
+            }
             if (cp.vendorExtensions != null) {
                 String cdsType = (String)cp.vendorExtensions.get("x-cds-type");
                 if (!StringUtils.isBlank(cdsType)) {

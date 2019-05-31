@@ -69,7 +69,7 @@ public interface {{classname}}  {
             reference = "{{referenceName}}"{{/isReference}}
         ){{#isCdsType}}
         {{cdsTypeAnnotation}}{{/isCdsType}}
-        {{#isEnum}}Param{{datatypeWithEnum}}{{/isEnum}}{{^isEnum}}{{dataType}}{{/isEnum}} {{paramName}}{{#hasMore}}, {{/hasMore}}{{/allParams}}
+        {{#isEnum}}{{datatypeWithEnum}}{{/isEnum}}{{^isEnum}}{{dataType}}{{/isEnum}} {{paramName}}{{#hasMore}}, {{/hasMore}}{{/allParams}}
     );{{/hasParams}}
     {{#hasMore}}
 
