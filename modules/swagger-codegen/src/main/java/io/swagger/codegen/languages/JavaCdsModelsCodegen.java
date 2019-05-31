@@ -75,7 +75,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         String groupName = co.tags.get(0).getName();
         String subGroupName = co.tags.get(1).getName();
         String[] parts = groupName.split(" ");
-        return parts[0] + sanitizeName(subGroupName).replace("_", "") + parts[1];
+        return parts[0] + sanitizeName(subGroupName).replace("_", "");
     }
 
     @Override
@@ -181,7 +181,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
 
     @Override
     public String toApiName(String name) {
-        return name;
+        return name + "API";
     }
 
     @Override
