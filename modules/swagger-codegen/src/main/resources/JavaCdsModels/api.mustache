@@ -19,7 +19,7 @@ import {{modelPackage}}.*;
 {{/imports}}
 
 {{#operations}}
-@Section(name = "{{classname}}"{{#tags}}{{#-first}}, tags = {"{{.}}"{{/-first}}{{^-first}}"{{.}}"{{/-first}}{{^-last}},{{/-last}}{{#-last}}{{closeBracket}}{{/-last}}{{/tags}})
+@Section(name = "{{section}}"{{#tags}}{{#-first}}, tags = {"{{.}}"{{/-first}}{{^-first}}"{{.}}"{{/-first}}{{^-last}},{{/-last}}{{#-last}}{{closeBracket}}{{/-last}}{{/tags}})
 public interface {{classname}}  {
 
 {{#operation}}

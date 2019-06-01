@@ -309,6 +309,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         obj.put("operation", cdsCodegenOperations);
         List<String> tagNames = operations.get(0).tags.stream().map(Tag::getName).collect(Collectors.toList());
         objs.put("tags", tagNames);
+        objs.put("section", getGroupTag(operations.get(0)));
         objs.put("openBracket", "{");
         objs.put("closeBracket", "}");
         return objs;
