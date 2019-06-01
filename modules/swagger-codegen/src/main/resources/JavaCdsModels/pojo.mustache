@@ -9,22 +9,10 @@
     {{/value.empty}}{{/-last}}{{#-last}}
 {{closeBracket}}){{/-last}}{{/cdsExtensionSet}}
 public class {{classname}}{{#isPaginatedResponse}} extends PaginatedResponse{{/isPaginatedResponse}}{{#isBaseResponse}} extends BaseResponse{{/isBaseResponse}} {
-{{#vars}}
-    {{#isEnum}}
-    {{^isContainer}}
+{{#_enums}}
 
 {{>enumClass}}
-    {{/isContainer}}
-    {{/isEnum}}
-    {{#items.isEnum}}
-    {{#items}}
-    {{^isContainer}}
-
-{{>enumClass}}
-    {{/isContainer}}
-    {{/items}}
-    {{/items.isEnum}}
-{{/vars}}
+{{/_enums}}
 {{#requiredVars}}
     {{^isInherited}}
 
@@ -33,7 +21,7 @@ public class {{classname}}{{#isPaginatedResponse}} extends PaginatedResponse{{/i
         required = true
     ){{#isCdsType}}
     {{cdsTypeAnnotation}}{{/isCdsType}}
-    {{{datatype}}} {{baseName}}{{#isDefaultValueVisible}} = {{defaultValue}}{{/isDefaultValueVisible}};
+    {{{datatypeWithEnum}}} {{baseName}}{{#isDefaultValueVisible}} = {{defaultValue}}{{/isDefaultValueVisible}};
     {{/isInherited}}
 {{/requiredVars}}
 {{#optionalVars}}
@@ -43,7 +31,7 @@ public class {{classname}}{{#isPaginatedResponse}} extends PaginatedResponse{{/i
         description = "{{{description}}}",
     ){{/description}}{{#isCdsType}}
     {{cdsTypeAnnotation}}{{/isCdsType}}
-    {{{datatype}}} {{baseName}}{{#isDefaultValueVisible}} = {{defaultValue}}{{/isDefaultValueVisible}};
+    {{{datatypeWithEnum}}} {{baseName}}{{#isDefaultValueVisible}} = {{defaultValue}}{{/isDefaultValueVisible}};
     {{/isInherited}}
 {{/optionalVars}}
 }{{/model}}{{/models}}

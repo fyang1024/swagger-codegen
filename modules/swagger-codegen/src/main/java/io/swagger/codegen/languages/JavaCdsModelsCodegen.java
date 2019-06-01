@@ -127,12 +127,12 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     }
 
     private void preprocessModels(Swagger swagger) {
-        for (Model model : swagger.getDefinitions().values()) {
-            if (model instanceof ComposedModel) {
-                ComposedModel composedModel = (ComposedModel) model;
+        for (Map.Entry<String, Model> entry : swagger.getDefinitions().entrySet()) {
+            if (entry.getValue() instanceof ComposedModel) {
+                ComposedModel composedModel = (ComposedModel) entry.getValue();
                 preprocessComposedModel(composedModel);
             }
-            preprocessProperties(model);
+            preprocessProperties(entry.getKey(), entry.getValue());
         }
     }
 
@@ -150,7 +150,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         }
     }
 
-    private void preprocessProperties(Model model) {
+    private void preprocessProperties(String modelKey, Model model) {
         if (model.getProperties() != null) {
             for (Map.Entry<String, Property> entry : model.getProperties().entrySet()) {
                 if (entry.getValue() instanceof RefProperty) {
@@ -159,6 +159,12 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
                     ArrayProperty ap = (ArrayProperty)entry.getValue();
                     if (ap.getItems() instanceof RefProperty) {
                         refModels.add(((RefProperty) ap.getItems()).getSimpleRef());
+                    }
+                } else if (entry.getValue() instanceof StringProperty) {
+                    StringProperty sp = (StringProperty)entry.getValue();
+                    if (sp.getEnum() != null && !sp.getEnum().isEmpty()) {
+                        System.out.println(modelKey + "." + entry.getKey());
+                        System.out.println(sp.getEnum());
                     }
                 }
             }
@@ -186,6 +192,9 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     @Override
     public void postProcessModelProperty(CodegenModel model, CodegenProperty property) {
         CdsCodegenProperty cdsCodegenProperty = new CdsCodegenProperty(property);
+        if (property.items != null) {
+            cdsCodegenProperty.items = new CdsCodegenProperty(property.items);
+        }
         replaceProperty(model, cdsCodegenProperty);
         if (cdsCodegenProperty.datatype.equals("Meta") || cdsCodegenProperty.datatype.equals("Links")) {
             cdsCodegenProperty.isInherited = true;
@@ -197,6 +206,56 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             !cdsCodegenProperty.defaultValue.startsWith("new ")) {
             cdsCodegenProperty.isDefaultValueVisible = true;
         }
+        if (model.interfaces != null && !model.interfaces.isEmpty()) {
+            if (cdsCodegenProperty.isEnum) {
+                findEnumType(cdsCodegenProperty, model.interfaces);
+            } else if (cdsCodegenProperty.items != null && cdsCodegenProperty.items.isEnum) {
+                findEnumType(cdsCodegenProperty.items, model.interfaces);
+            }
+        }
+    }
+
+    private String findEnumType(CodegenProperty cp, List<String> interfaces) {
+        for (String modelKey : interfaces) {
+            Model model = swagger.getDefinitions().get(modelKey);
+            if (model != null) {
+                List<String> values = (List<String>)cp.allowableValues.get("values");
+                String enumType = findEnumType(cp.datatypeWithEnum, values, modelKey, model);
+                if (enumType != null) {
+                    cp.datatype = enumType;
+                    cp.datatypeWithEnum = enumType;
+                    ((CdsCodegenProperty)cp).isEnumTypeExternal = true;
+                    return enumType;
+                }
+            }
+        }
+        return null;
+    }
+
+    private String findEnumType(String datatypeWithEnum, List<String> values, String modelKey, Model model) {
+        for (Map.Entry<String, Property> entry : model.getProperties().entrySet()) {
+            if (entry.getValue() instanceof StringProperty) {
+                StringProperty sp = (StringProperty) entry.getValue();
+                if (sp.getEnum() != null && isTheSame(values, sp.getEnum())) {
+                    return modelKey + "." + datatypeWithEnum;
+                }
+            }
+        }
+        return null;
+    }
+
+    private boolean isTheSame(List<String> values1, List<String> values2) {
+        if (values1.size() != values2.size()) {
+            return false;
+        }
+        List<String> copy1 = new ArrayList<>(values1);
+        Collections.sort(copy1);
+        List<String> copy2 = new ArrayList<>(values2);
+        Collections.sort(copy2);
+        for (int i = 0; i < copy1.size(); i++) {
+            if (!copy1.get(i).equals(copy2.get(i))) return false;
+        }
+        return true;
     }
 
     private void replaceProperty(CodegenModel model, CodegenProperty property) {
@@ -230,6 +289,13 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         if (model instanceof ComposedModel) {
             Model child = ((ComposedModel) model).getChild();
             codegenModel.vendorExtensions.putAll(child.getVendorExtensions());
+        }
+        for (CodegenProperty cp : codegenModel.vars) {
+            if (cp.isEnum && !((CdsCodegenProperty)cp).isEnumTypeExternal) {
+                codegenModel._enums.add(cp);
+            } else if (cp.items != null && cp.items.isEnum && !((CdsCodegenProperty)cp.items).isEnumTypeExternal) {
+                codegenModel._enums.add(cp.items);
+            }
         }
         return codegenModel;
     }
@@ -360,6 +426,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         public boolean isReferenced;
         public boolean isBaseResponse;
         public boolean isPaginatedResponse;
+        public List<CodegenProperty> _enums = new ArrayList<>();
 
         public CdsCodegenModel(CodegenModel cm) {
 
@@ -403,6 +470,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         public String cdsTypeAnnotation;
         public boolean isCdsType;
         public boolean isDefaultValueVisible;
+        public boolean isEnumTypeExternal;
 
         public CdsCodegenProperty(CodegenProperty cp) {
 
