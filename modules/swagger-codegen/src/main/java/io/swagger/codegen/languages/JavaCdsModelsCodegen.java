@@ -36,7 +36,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
 
         static ResponseCode of(String code) {
             for (ResponseCode value : values()) {
-                if (value.code == code) {
+                if (value.code.equals(code)) {
                     return value;
                 }
             }
@@ -154,12 +154,12 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     }
 
     private void preprocessModels(Swagger swagger) {
-        for (Map.Entry<String, Model> entry : swagger.getDefinitions().entrySet()) {
-            if (entry.getValue() instanceof ComposedModel) {
-                ComposedModel composedModel = (ComposedModel) entry.getValue();
+        for (Model model : swagger.getDefinitions().values()) {
+            if (model instanceof ComposedModel) {
+                ComposedModel composedModel = (ComposedModel) model;
                 preprocessComposedModel(composedModel);
             }
-            preprocessProperties(entry.getKey(), entry.getValue());
+            preprocessProperties(model);
         }
     }
 
@@ -177,7 +177,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         }
     }
 
-    private void preprocessProperties(String modelKey, Model model) {
+    private void preprocessProperties(Model model) {
         if (model.getProperties() != null) {
             for (Map.Entry<String, Property> entry : model.getProperties().entrySet()) {
                 if (entry.getValue() instanceof RefProperty) {
@@ -198,9 +198,6 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             String paramName = entry.getKey();
             refParameters.put(parameter.getName(), paramName);
             refModels.add(paramName);
-            if (parameter instanceof BodyParameter) {
-                BodyParameter bodyParameter = (BodyParameter) parameter;
-            }
         }
     }
 
@@ -333,7 +330,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
                 CdsCodegenParameter ccp = (CdsCodegenParameter)cp;
                 if (ccp.isEnum && !ccp.isReference) {
                     if (!ccp.datatypeWithEnum.startsWith("Param")) {
-                        ccp.datatypeWithEnum = "Param" + ccp.datatypeWithEnum;
+                        ccp.datatypeWithEnum = String.format("Param%s", ccp.datatypeWithEnum);
                     }
                     _enums.add(ccp);
                 }
@@ -370,9 +367,6 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     }
 
     private class CdsCodegenOperation extends CodegenOperation {
-        public boolean hasCdsScopes;
-        public Object cdsScopes;
-        public Set<Map.Entry<String, Object>> cdsExtensionSet;
 
         CdsCodegenOperation(CodegenOperation co) {
 
@@ -408,8 +402,6 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             this.externalDocs = co.externalDocs;
 
             // set cds specific properties
-            this.cdsScopes = co.vendorExtensions.get("x-scopes");
-            this.hasCdsScopes = cdsScopes != null && !((List)cdsScopes).isEmpty();
             this.vendorExtensions.remove("x-accepts");
         }
 
@@ -470,7 +462,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         public boolean isPaginatedResponse;
         public List<CodegenProperty> _enums = new ArrayList<>();
 
-        public CdsCodegenModel(CodegenModel cm) {
+        CdsCodegenModel(CodegenModel cm) {
 
             // Copy relevant fields of CodegenModel
             this.name = cm.name;
@@ -514,7 +506,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         public boolean isDefaultValueVisible;
         public boolean isEnumTypeExternal;
 
-        public CdsCodegenProperty(CodegenProperty cp) {
+        CdsCodegenProperty(CodegenProperty cp) {
 
             // copy relevant fields of CodegenProperty
             this.description = cp.description;
