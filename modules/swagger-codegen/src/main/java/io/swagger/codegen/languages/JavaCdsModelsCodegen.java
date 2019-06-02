@@ -17,6 +17,12 @@ import java.util.stream.Collectors;
 
 public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
 
+    Map<String, String> modelNameMap = new HashMap<String, String>() {
+        {
+            put("ResponseErrorList_errors", "Error");
+        }
+    };
+
     enum ResponseCode {
         OK("200"),
         CREATED("201"),
@@ -204,6 +210,15 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     @Override
     public String toApiName(String name) {
         return name + "API";
+    }
+
+    @Override
+    public String toModelName(String name) {
+        String mappedName = modelNameMap.get(name);
+        if (mappedName != null) {
+            return super.toModelName(mappedName);
+        }
+        return super.toModelName(name);
     }
 
     @Override
