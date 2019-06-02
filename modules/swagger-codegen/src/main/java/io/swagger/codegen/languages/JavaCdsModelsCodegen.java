@@ -403,6 +403,14 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
 
             // set cds specific properties
             this.vendorExtensions.remove("x-accepts");
+            Iterator<Map.Entry<String, Object>> iterator = this.vendorExtensions.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<String, Object> next = iterator.next();
+                Object value = next.getValue();
+                if (value instanceof List && ((List) value).isEmpty()) {
+                    iterator.remove();
+                }
+            }
         }
 
         public Set<Map.Entry<String, Object>> getCdsExtensionSet() {
