@@ -34,29 +34,13 @@ public interface {{classname}}  {
         requestMethod = RequestMethod.{{ httpMethod }},
         operationId = "{{nickname}}",
         responses = {
-            @EndpointResponse(
-                responseCode = ResponseCode.OK,
-                description = "Success",
-                content = {{returnBaseType}}{{^returnBaseType}}void{{/returnBaseType}}.class
-            ){{#hasCdsScopes}},
-            @EndpointResponse(
-                responseCode = ResponseCode.UNAUTHORIZED,
-                description = "Authorization header missing or invalid token",
-                content = ErrorResponse.class
-            ),
-            @EndpointResponse(
-                responseCode = ResponseCode.FORBIDDEN,
-                description = "Token has incorrect scope or a security policy was violated.",
-                content = ErrorResponse.class
-            ){{/hasCdsScopes}}
-        }{{#hasCdsScopes}},
-        requiredAuth = {
-            @EndpointAuth(
-                type = EndpointAuthType.CDS_FAPI,
-                access = EndpointAuthAccess.READ_ONLY,
-                scopes = {{openBracket}} {{#cdsScopes}}Scope.{{#uppercase}}{{.}}{{/uppercase}}{{^-last}},{{/-last}}{{/cdsScopes}} {{closeBracket}}
-            )
-        }{{/hasCdsScopes}}
+            {{#responses}}@EndpointResponse(
+                responseCode = {{code}},
+                description = "{{message}}",
+                content = {{dataType}}.class
+            ){{#hasMore}},
+            {{/hasMore}}{{/responses}}
+        }
     ){{#cdsExtensionSet}}{{#-first}}
     @CustomAttributes({{openBracket}}{{/-first}}{{^value.length}}
         {{#value}}@CustomAttribute(name = "{{key}}", value = "{{.}}", multiple = true){{^-last}},

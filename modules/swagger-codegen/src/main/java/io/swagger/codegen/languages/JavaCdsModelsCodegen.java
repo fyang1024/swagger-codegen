@@ -17,6 +17,33 @@ import java.util.stream.Collectors;
 
 public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
 
+    enum ResponseCode {
+        OK("200"),
+        CREATED("201"),
+        ACCEPTED("202"),
+        NO_CONTENT("204"),
+        BAD_REQUEST("400"),
+        UNAUTHORIZED("401"),
+        FORBIDDEN("403"),
+        UNPROCESSABLE_ENTITY("422"),
+        TOO_MANY_REQUESTS("429");
+
+        String code;
+
+        ResponseCode(String code) {
+            this.code = code;
+        }
+
+        static ResponseCode of(String code) {
+            for (ResponseCode value : values()) {
+                if (value.code == code) {
+                    return value;
+                }
+            }
+            return null;
+        }
+    }
+
     private Swagger swagger = null;
     private Map<String, String> refParameters = new HashMap<>();
     private Set<String> refModels = new HashSet<>();
@@ -173,7 +200,6 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             refModels.add(paramName);
             if (parameter instanceof BodyParameter) {
                 BodyParameter bodyParameter = (BodyParameter) parameter;
-                System.out.println(paramName + " -> " + bodyParameter.getSchema());
             }
         }
     }
@@ -311,6 +337,10 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
                     }
                     _enums.add(ccp);
                 }
+            }
+            for (CodegenResponse cr : co.responses) {
+                ResponseCode responseCode = ResponseCode.of(cr.code);
+                cr.code = "ResponseCode." + (responseCode == null ? cr.code : responseCode);
             }
         }
         objs.put("_enums", _enums);
