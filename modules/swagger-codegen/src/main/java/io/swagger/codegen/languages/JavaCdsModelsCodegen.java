@@ -160,12 +160,6 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
                     if (ap.getItems() instanceof RefProperty) {
                         refModels.add(((RefProperty) ap.getItems()).getSimpleRef());
                     }
-                } else if (entry.getValue() instanceof StringProperty) {
-                    StringProperty sp = (StringProperty)entry.getValue();
-                    if (sp.getEnum() != null && !sp.getEnum().isEmpty()) {
-                        System.out.println(modelKey + "." + entry.getKey());
-                        System.out.println(sp.getEnum());
-                    }
                 }
             }
         }
@@ -307,6 +301,19 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         List<CodegenOperation> operations = (List<CodegenOperation>) obj.get("operation");
         List<CdsCodegenOperation> cdsCodegenOperations = operations.stream().map(CdsCodegenOperation::new).collect(Collectors.toList());
         obj.put("operation", cdsCodegenOperations);
+        List<Object> _enums = new ArrayList<>();
+        for(CdsCodegenOperation co : cdsCodegenOperations) {
+            for (CodegenParameter cp : co.allParams) {
+                CdsCodegenParameter ccp = (CdsCodegenParameter)cp;
+                if (ccp.isEnum && !ccp.isReference) {
+                    if (!ccp.datatypeWithEnum.startsWith("Param")) {
+                        ccp.datatypeWithEnum = "Param" + ccp.datatypeWithEnum;
+                    }
+                    _enums.add(ccp);
+                }
+            }
+        }
+        objs.put("_enums", _enums);
         List<String> tagNames = operations.get(0).tags.stream().map(Tag::getName).collect(Collectors.toList());
         objs.put("tags", tagNames);
         objs.put("section", getGroupTag(operations.get(0)));
@@ -406,10 +413,14 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             this.dataType = cp.dataType;
             this.paramName = cp.paramName;
             this.hasMore = cp.hasMore;
+            this.items = cp.items;
 
             // set cds specific properties
             this.isReference = refParameters.containsKey(this.baseName);
             this.referenceName = refParameters.get(this.baseName);
+            if (!StringUtils.isBlank(referenceName)) {
+                this.datatypeWithEnum = referenceName;
+            }
             if (cp.vendorExtensions != null) {
                 String cdsType = (String)cp.vendorExtensions.get("x-cds-type");
                 if (!StringUtils.isBlank(cdsType)) {

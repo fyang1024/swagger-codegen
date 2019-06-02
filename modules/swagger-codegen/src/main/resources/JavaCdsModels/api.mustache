@@ -21,8 +21,12 @@ import {{modelPackage}}.*;
 {{#operations}}
 @Section(name = "{{section}}"{{#tags}}{{#-first}}, tags = {"{{.}}"{{/-first}}{{^-first}}"{{.}}"{{/-first}}{{^-last}},{{/-last}}{{#-last}}{{closeBracket}}{{/-last}}{{/tags}})
 public interface {{classname}}  {
+{{#_enums}}
 
+{{>enumClass}}
+{{/_enums}}
 {{#operation}}
+
     @Endpoint(
         path = "{{{path}}}",
         summary = "{{ summary }}",
@@ -71,12 +75,6 @@ public interface {{classname}}  {
         {{cdsTypeAnnotation}}{{/isCdsType}}
         {{#isEnum}}{{datatypeWithEnum}}{{/isEnum}}{{^isEnum}}{{dataType}}{{/isEnum}} {{paramName}}{{#hasMore}}, {{/hasMore}}{{/allParams}}
     );{{/hasParams}}
-    {{#hasMore}}
-
-    {{/hasMore}}
 {{/operation}}
 {{/operations}}
 }
-
-
-
