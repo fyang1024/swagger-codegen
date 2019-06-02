@@ -1,22 +1,7 @@
 package {{apiPackage}};
 
-import au.org.consumerdatastandards.support.*;
-import au.org.consumerdatastandards.support.security.EndpointAuth;
-import au.org.consumerdatastandards.support.security.EndpointAuthAccess;
-import au.org.consumerdatastandards.support.security.EndpointAuthType;
-import au.org.consumerdatastandards.api.common.responses.ErrorResponse;
-import au.org.consumerdatastandards.api.common.models.Scope;
-import au.org.consumerdatastandards.support.data.Format;
-import au.org.consumerdatastandards.support.data.CustomAttribute;
-import au.org.consumerdatastandards.support.data.StringFormat;
-import au.org.consumerdatastandards.support.data.CustomAttributes;
-import au.org.consumerdatastandards.support.data.CDSDataType;
-import au.org.consumerdatastandards.support.data.CustomDataType;
-
-import {{modelPackage}}.*;
-
 {{#imports}}import {{import}};
-{{/imports}}
+{{/imports}}import au.org.consumerdatastandards.support.data.*;
 
 {{#operations}}
 @Section(name = "{{section}}"{{#tags}}{{#-first}}, tags = {"{{.}}"{{/-first}}{{^-first}}"{{.}}"{{/-first}}{{^-last}},{{/-last}}{{#-last}}{{closeBracket}}{{/-last}}{{/tags}})

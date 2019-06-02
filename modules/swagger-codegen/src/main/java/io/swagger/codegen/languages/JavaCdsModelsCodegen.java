@@ -329,6 +329,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
                 codegenModel._enums.add(cp.items);
             }
         }
+        codegenModel.imports.remove("ApiModel");
         return codegenModel;
     }
 

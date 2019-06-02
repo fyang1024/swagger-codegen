@@ -1,13 +1,9 @@
 package {{package}};
 
 {{#imports}}import {{import}};
-{{/imports}}
-{{#models}}{{#model}}{{#isBaseResponse}}
-import au.org.consumerdatastandards.api.common.responses.BaseResponse;
-{{/isBaseResponse}}{{#isPaginatedResponse}}
-import au.org.consumerdatastandards.api.common.responses.PaginatedResponse;
-{{/isPaginatedResponse}}{{#isEnum}}{{>enumOuterClass}}{{/isEnum}}
-{{^isEnum}}import au.org.consumerdatastandards.support.data.*;
+{{/imports}}{{#models}}{{#model}}{{#isBaseResponse}}import au.org.consumerdatastandards.api.common.responses.BaseResponse;
+{{/isBaseResponse}}{{#isPaginatedResponse}}import au.org.consumerdatastandards.api.common.responses.PaginatedResponse;
+{{/isPaginatedResponse}}{{#isEnum}}{{>enumOuterClass}}{{/isEnum}}{{^isEnum}}import au.org.consumerdatastandards.support.data.*;
 
 {{>pojo}}{{/isEnum}}
 {{/model}}{{/models}}
