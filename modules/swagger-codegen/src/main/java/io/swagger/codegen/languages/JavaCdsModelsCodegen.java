@@ -433,16 +433,22 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         List<CodegenOperation> operations = (List<CodegenOperation>) obj.get("operation");
         List<CdsCodegenOperation> cdsCodegenOperations = operations.stream().map(CdsCodegenOperation::new).collect(Collectors.toList());
         obj.put("operation", cdsCodegenOperations);
-        obj.put("apiPackage", apiPackage + "." + operations.get(0).tags.get(0).getName().split(" ")[0]);
+        List imports  = (List)objs.get("imports");
         List<Object> _enums = new ArrayList<>();
         for (CdsCodegenOperation co : cdsCodegenOperations) {
             for (CodegenParameter cp : co.allParams) {
                 CdsCodegenParameter ccp = (CdsCodegenParameter) cp;
-                if (ccp.isEnum && !ccp.isReference) {
-                    if (!ccp.datatypeWithEnum.startsWith("Param")) {
-                        ccp.datatypeWithEnum = String.format("Param%s", ccp.datatypeWithEnum);
+                if (ccp.isEnum) {
+                    if (ccp.isReference) {
+                        imports.add(new HashMap<String, String>(){{
+                            put("import", modelPackage + "." + ccp.referenceName);
+                        }});
+                    } else {
+                        if (!ccp.datatypeWithEnum.startsWith("Param")) {
+                            ccp.datatypeWithEnum = String.format("Param%s", ccp.datatypeWithEnum);
+                        }
+                        _enums.add(ccp);
                     }
-                    _enums.add(ccp);
                 }
             }
             for (CodegenResponse cr : co.responses) {
@@ -450,6 +456,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
                 cr.code = "ResponseCode." + (responseCode == null ? cr.code : responseCode);
             }
         }
+        objs.put("cdsApiPackage", apiPackage + "." + operations.get(0).tags.get(0).getName().split(" ")[0].toLowerCase());
         objs.put("_enums", _enums);
         postProcessImports(objs);
         List<String> tagNames = operations.get(0).tags.stream().map(Tag::getName).collect(Collectors.toList());
@@ -669,6 +676,10 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
 
         public String getModelPackage() {
             return modelPackage.replace("models", subPackage + ".models");
+        }
+
+        public boolean hasDescriptionOrNotReferenced() {
+            return !StringUtils.isBlank(description) || !isReferenced;
         }
     }
 

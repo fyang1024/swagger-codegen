@@ -1,4 +1,4 @@
-    public static enum {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{classname}}{{/datatypeWithEnum}} {{openBracket}}{{#allowableValues}}{{#enumVars}}
+    public enum {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{classname}}{{/datatypeWithEnum}} {{openBracket}}{{#allowableValues}}{{#enumVars}}
         {{{name}}}{{^-last}},{{/-last}}{{#-last}};{{/-last}}{{/enumVars}}
     {{/allowableValues}}
     }

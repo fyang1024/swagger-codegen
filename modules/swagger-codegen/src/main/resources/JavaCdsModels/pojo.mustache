@@ -1,5 +1,5 @@
 {{#models}}{{#model}}@DataDefinition{{^isSimple}}({{#interfaces.size}}
-    allOf = { {{#interfaces}}{{.}}.class{{^-last}}, {{/-last}}{{/interfaces}} }{{#description}},{{/description}}{{/interfaces.size}}{{^isReferenced}}
+    allOf = { {{#interfaces}}{{.}}.class{{^-last}}, {{/-last}}{{/interfaces}} }{{#hasDescriptionOrNotReferenced}},{{/hasDescriptionOrNotReferenced}}{{/interfaces.size}}{{^isReferenced}}
     referenced = false{{#description}},{{/description}}{{/isReferenced}}{{#description}}
     description = "{{{description}}}"{{/description}}
 ){{/isSimple}}{{#cdsExtensionSet}}{{#-first}}
@@ -28,7 +28,7 @@ public class {{classname}}{{#isPaginatedResponse}} extends PaginatedResponse{{/i
     {{^isInherited}}
 
     @Property{{#description}}(
-        description = "{{{description}}}",
+        description = "{{{description}}}"
     ){{/description}}{{#isCdsType}}
     {{cdsTypeAnnotation}}{{/isCdsType}}
     {{{datatypeWithEnum}}} {{baseName}}{{#isDefaultValueVisible}} = {{defaultValue}}{{/isDefaultValueVisible}};

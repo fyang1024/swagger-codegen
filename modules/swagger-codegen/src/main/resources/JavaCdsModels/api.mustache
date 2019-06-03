@@ -1,7 +1,8 @@
-package {{apiPackage}};
+package {{cdsApiPackage}};
 
 {{#imports}}import {{import}};
 {{/imports}}import au.org.consumerdatastandards.support.data.*;
+import au.org.consumerdatastandards.support.*;
 
 {{#operations}}
 @Section(name = "{{section}}"{{#tags}}{{#-first}}, tags = {"{{.}}"{{/-first}}{{^-first}}"{{.}}"{{/-first}}{{^-last}},{{/-last}}{{#-last}}{{closeBracket}}{{/-last}}{{/tags}})
