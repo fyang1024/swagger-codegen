@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
 
-    Map<String, String> modelNameMap = new HashMap<String, String>() {
+    private Map<String, String> modelNameMap = new HashMap<String, String>() {
         {
             put("ResponseErrorList_errors", "Error");
         }
@@ -181,20 +181,29 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         } else if (schema instanceof ComposedModel) {
             ComposedModel cm = (ComposedModel) schema;
             if (cm.getParent() != null) {
-                processModel(packageName, cm.getParent());
+                preprocessModel(packageName, modelName, cm.getParent());
             }
-            if (cm.getChild() != null) {
-                processModel(packageName, cm.getChild());
-            }
+            Model child = cm.getChild();
+            preprocessModel(packageName, modelName, child);
             if (cm.getInterfaces() != null && !cm.getInterfaces().isEmpty()) {
                 for (Model model : cm.getInterfaces()) {
-                    processModel(packageName, model);
+                    preprocessModel(packageName, modelName, model);
                 }
             }
         }
         if (schema.getProperties() != null) {
             for (Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
                 processProperty(modelName, entry.getValue(), entry.getKey());
+            }
+        }
+    }
+
+    private void preprocessModel(String packageName, String modelName, Model model) {
+        if (model != null) {
+            if (model instanceof ModelImpl) {
+                processModel(packageName, modelName, model);
+            } else if (model instanceof RefModel) {
+                processModel(packageName, ((RefModel) model).getSimpleRef(), model);
             }
         }
     }
@@ -210,6 +219,12 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             String ref = toModelName(modelName + "_" + propertyName);
             Set<String> packageNames = modelPackages.get(modelName);
             addPackagesToModel(packageNames, ref);
+            ObjectProperty op = (ObjectProperty) property;
+            if (op.getProperties() != null) {
+                for (Map.Entry<String, Property> entry : op.getProperties().entrySet()) {
+                    processProperty(ref, entry.getValue(), entry.getKey());
+                }
+            }
         } else if (property instanceof ArrayProperty) {
             ArrayProperty ap = (ArrayProperty) property;
             processProperty(modelName, ap.getItems(), propertyName);
@@ -217,10 +232,11 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     }
 
     private void addPackageForModel(String packageName, String modelName) {
-        modelPackages.computeIfAbsent(modelName, k -> new HashSet<>());
-        if (!modelPackages.get(modelName).contains(packageName)) {
-            modelPackages.get(modelName).add(packageName);
-            System.out.println("added " + modelName + " to package " + packageName);
+        if (!StringUtils.isBlank(modelName)) {
+            modelPackages.computeIfAbsent(modelName, k -> new HashSet<>());
+            if (!modelPackages.get(modelName).contains(packageName)) {
+                modelPackages.get(modelName).add(packageName);
+            }
         }
     }
 
@@ -444,6 +460,13 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     @Override
     public Map<String, Object> postProcessModels(Map<String, Object> objs) {
         super.postProcessModels(objs);
+        List<Object> imports = (List) objs.get("imports");
+        for (Object o : imports) {
+            Map<String, String> importMap = (Map<String, String>) o;
+            for (Map.Entry<String, String> entry : importMap.entrySet()) {
+                importMap.put(entry.getKey(), transformImport(entry.getValue()));
+            }
+        }
         objs.put("openBracket", "{");
         objs.put("closeBracket", "}");
         return objs;
@@ -551,16 +574,28 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
                 }
             }
         }
-
     }
 
-    private class CdsCodegenModel extends CodegenModel {
+    private String getSubPackage(String modelName) {
+        Set<String> packages = modelPackages.get(toModelName(modelName));
+        if (packages != null && !packages.isEmpty()) {
+            if (packages.size() == 1) {
+                return packages.iterator().next();
+            } else {
+                return "common";
+            }
+        }
+        return null;
+    }
+
+    public class CdsCodegenModel extends CodegenModel {
 
         public boolean isSimple;
         public boolean isReferenced;
         public boolean isBaseResponse;
         public boolean isPaginatedResponse;
         public List<CodegenProperty> _enums = new ArrayList<>();
+        public String subPackage;
 
         CdsCodegenModel(CodegenModel cm) {
 
@@ -581,23 +616,43 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             this.allowableValues = cm.allowableValues;
             this.mandatory = cm.mandatory;
             this.allMandatory = cm.allMandatory;
-            this.imports = cm.imports;
             this.hasEnums = cm.hasEnums;
             this.isEnum = cm.isEnum;
             this.isArrayModel = cm.isArrayModel;
             this.hasChildren = cm.hasChildren;
             this.externalDocs = cm.externalDocs;
+            this.imports = cm.imports;
             this.vendorExtensions = cm.vendorExtensions;
 
             // set cds specific properties
             this.isReferenced = refModels.contains(this.classname);
             this.isSimple = (this.interfaces == null || this.interfaces.isEmpty())
                 && StringUtils.isBlank(this.description) && this.isReferenced;
+            this.subPackage = getSubPackage(this.name);
         }
 
         public Set<Map.Entry<String, Object>> getCdsExtensionSet() {
             return vendorExtensions.entrySet();
         }
+
+        public String getModelFileFolder() {
+            return outputFolder + "/" + sourceFolder + "/" + getModelPackage().replace('.', '/');
+        }
+
+        public String getModelPackage() {
+            return modelPackage.replace("models", subPackage + ".models");
+        }
+    }
+
+    private String transformImport(String originalImport) {
+        if(originalImport.startsWith(modelPackage)) {
+            String modelName = originalImport.substring(modelPackage.length());
+            String subPackage = getSubPackage(modelName);
+            if (!StringUtils.isBlank(subPackage)) {
+                return originalImport.replace("models", subPackage + ".models");
+            }
+        }
+        return originalImport;
     }
 
     private class CdsCodegenProperty extends CodegenProperty {

@@ -4,6 +4,7 @@ import com.samskivert.mustache.Mustache;
 import com.samskivert.mustache.Template;
 import io.swagger.codegen.ignore.CodegenIgnoreProcessor;
 import io.swagger.codegen.languages.AbstractJavaCodegen;
+import io.swagger.codegen.languages.JavaCdsModelsCodegen;
 import io.swagger.codegen.utils.ImplementationVersion;
 import io.swagger.models.*;
 import io.swagger.models.auth.OAuth2Definition;
@@ -413,6 +414,12 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                 for (String templateName : config.modelTemplateFiles().keySet()) {
                     String suffix = config.modelTemplateFiles().get(templateName);
                     String filename = config.modelFileFolder() + File.separator + config.toModelFilename(modelName) + suffix;
+                    CodegenModel cm = (CodegenModel) modelTemplate.get("model");
+                    if (cm instanceof JavaCdsModelsCodegen.CdsCodegenModel) {
+                        JavaCdsModelsCodegen.CdsCodegenModel ccm = (JavaCdsModelsCodegen.CdsCodegenModel)cm;
+                        filename = ccm.getModelFileFolder() + File.separator + config.toModelFilename(modelName) + suffix;
+                        models.put("package", ccm.getModelPackage());
+                    }
                     if (!config.shouldOverwrite(filename)) {
                         LOGGER.info("Skipped overwriting " + filename);
                         continue;
