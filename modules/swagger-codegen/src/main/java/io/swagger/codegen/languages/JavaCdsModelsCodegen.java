@@ -6,10 +6,7 @@ import io.swagger.models.*;
 import io.swagger.models.parameters.BodyParameter;
 import io.swagger.models.parameters.Parameter;
 import io.swagger.models.parameters.SerializableParameter;
-import io.swagger.models.properties.ArrayProperty;
-import io.swagger.models.properties.Property;
-import io.swagger.models.properties.RefProperty;
-import io.swagger.models.properties.StringProperty;
+import io.swagger.models.properties.*;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
@@ -53,6 +50,13 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     private Swagger swagger = null;
     private Map<String, String> refParameters = new HashMap<>();
     private Set<String> refModels = new HashSet<>();
+    private Map<String, Set<String>> modelPackages = new HashMap<String, Set<String>>() {
+        {
+            put("ResponseErrorList", new HashSet<>(Collections.singletonList("common")));
+            put("LinksPaginated", new HashSet<>(Collections.singletonList("common")));
+            put("MetaPaginated", new HashSet<>(Collections.singletonList("common")));
+        }
+    };
 
     public JavaCdsModelsCodegen() {
 
@@ -127,12 +131,13 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     }
 
     private void preprocessPath(Path path) {
-        for(Operation operation : path.getOperations()){
+        for (Operation operation : path.getOperations()) {
             preprocessOperation(operation);
         }
     }
 
     private void preprocessOperation(Operation operation) {
+        String packageName = getPackageName(operation.getTags());
         for (Parameter parameter : operation.getParameters()) {
             if (parameter instanceof SerializableParameter) {
                 SerializableParameter sp = (SerializableParameter) parameter;
@@ -142,21 +147,92 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
                         ModelImpl enumModel = new ModelImpl().type(StringProperty.TYPE)._enum(sp.getEnum());
                         enumModel.setDescription(sp.getDescription());
                         swagger.getDefinitions().put(referenceName, enumModel);
+                        addPackageForModel(packageName, referenceName);
                     }
                 }
             }
             if (parameter instanceof BodyParameter) {
                 Model schema = ((BodyParameter) parameter).getSchema();
-                if (schema instanceof RefModel) {
-                    refModels.add(((RefModel)schema).getSimpleRef());
-                }
+                processModel(packageName, schema);
             }
         }
         for (Response response : operation.getResponses().values()) {
-            if (response.getResponseSchema() instanceof RefModel) {
-                refModels.add(((RefModel) response.getResponseSchema()).getSimpleRef());
+            Model schema = response.getResponseSchema();
+            processModel(packageName, schema);
+        }
+    }
+
+    private void processModel(String packageName, Model schema) {
+        String modelName = null;
+        if (schema instanceof ModelImpl) {
+            modelName = ((ModelImpl) schema).getName();
+        } else if (schema instanceof RefModel) {
+            modelName = ((RefModel) schema).getSimpleRef();
+        }
+        processModel(packageName, modelName, schema);
+    }
+
+    private void processModel(String packageName, String modelName, Model schema) {
+        addPackageForModel(packageName, modelName);
+        if (schema instanceof RefModel) {
+            refModels.add(modelName);
+            Model model = swagger.getDefinitions().get(modelName);
+            processModel(packageName, modelName, model);
+        } else if (schema instanceof ComposedModel) {
+            ComposedModel cm = (ComposedModel) schema;
+            if (cm.getParent() != null) {
+                processModel(packageName, cm.getParent());
+            }
+            if (cm.getChild() != null) {
+                processModel(packageName, cm.getChild());
+            }
+            if (cm.getInterfaces() != null && !cm.getInterfaces().isEmpty()) {
+                for (Model model : cm.getInterfaces()) {
+                    processModel(packageName, model);
+                }
             }
         }
+        if (schema.getProperties() != null) {
+            for (Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
+                processProperty(modelName, entry.getValue(), entry.getKey());
+            }
+        }
+    }
+
+    private void processProperty(String modelName, Property property, String propertyName) {
+        if (property instanceof RefProperty) {
+            String ref = ((RefProperty) property).getSimpleRef();
+            Set<String> packageNames = modelPackages.get(modelName);
+            if (packageNames != null) {
+                packageNames.forEach(p -> processModel(p, ref, swagger.getDefinitions().get(ref)));
+            }
+        } else if (property instanceof ObjectProperty) {
+            String ref = toModelName(modelName + "_" + propertyName);
+            Set<String> packageNames = modelPackages.get(modelName);
+            addPackagesToModel(packageNames, ref);
+        } else if (property instanceof ArrayProperty) {
+            ArrayProperty ap = (ArrayProperty) property;
+            processProperty(modelName, ap.getItems(), propertyName);
+        }
+    }
+
+    private void addPackageForModel(String packageName, String modelName) {
+        modelPackages.computeIfAbsent(modelName, k -> new HashSet<>());
+        if (!modelPackages.get(modelName).contains(packageName)) {
+            modelPackages.get(modelName).add(packageName);
+            System.out.println("added " + modelName + " to package " + packageName);
+        }
+    }
+
+    private void addPackagesToModel(Set<String> packageNames, String modelName) {
+        modelPackages.computeIfAbsent(modelName, k -> new HashSet<>());
+        if (packageNames != null) {
+            packageNames.forEach(p -> addPackageForModel(p, modelName));
+        }
+    }
+
+    private String getPackageName(List<String> operationTags) {
+        return operationTags.get(0).split(" ")[0].toLowerCase();
     }
 
     private void preprocessModels(Swagger swagger) {
@@ -189,7 +265,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
                 if (entry.getValue() instanceof RefProperty) {
                     refModels.add(((RefProperty) entry.getValue()).getSimpleRef());
                 } else if (entry.getValue() instanceof ArrayProperty) {
-                    ArrayProperty ap = (ArrayProperty)entry.getValue();
+                    ArrayProperty ap = (ArrayProperty) entry.getValue();
                     if (ap.getItems() instanceof RefProperty) {
                         refModels.add(((RefProperty) ap.getItems()).getSimpleRef());
                     }
@@ -199,7 +275,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     }
 
     private void preprocessParameters(Swagger swagger) {
-        for(Map.Entry<String, Parameter> entry : swagger.getParameters().entrySet()) {
+        for (Map.Entry<String, Parameter> entry : swagger.getParameters().entrySet()) {
             Parameter parameter = entry.getValue();
             String paramName = entry.getKey();
             refParameters.put(parameter.getName(), paramName);
@@ -251,12 +327,12 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         for (String modelKey : interfaces) {
             Model model = swagger.getDefinitions().get(modelKey);
             if (model != null) {
-                List<String> values = (List<String>)cp.allowableValues.get("values");
+                List<String> values = (List<String>) cp.allowableValues.get("values");
                 String enumType = findEnumType(cp.datatypeWithEnum, values, modelKey, model);
                 if (enumType != null) {
                     cp.datatype = enumType;
                     cp.datatypeWithEnum = enumType;
-                    ((CdsCodegenProperty)cp).isEnumTypeExternal = true;
+                    ((CdsCodegenProperty) cp).isEnumTypeExternal = true;
                     return enumType;
                 }
             }
@@ -310,7 +386,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         if (model.getProperties() != null) {
             Property property = model.getProperties().get("links");
             if (property != null) {
-                RefProperty refProperty = (RefProperty)property;
+                RefProperty refProperty = (RefProperty) property;
                 if (refProperty.getSimpleRef().equals("Links")) {
                     codegenModel.isBaseResponse = true;
                 } else if (refProperty.getSimpleRef().equals("LinksPaginated")) {
@@ -323,9 +399,9 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             codegenModel.vendorExtensions.putAll(child.getVendorExtensions());
         }
         for (CodegenProperty cp : codegenModel.vars) {
-            if (cp.isEnum && !((CdsCodegenProperty)cp).isEnumTypeExternal) {
+            if (cp.isEnum && !((CdsCodegenProperty) cp).isEnumTypeExternal) {
                 codegenModel._enums.add(cp);
-            } else if (cp.items != null && cp.items.isEnum && !((CdsCodegenProperty)cp.items).isEnumTypeExternal) {
+            } else if (cp.items != null && cp.items.isEnum && !((CdsCodegenProperty) cp.items).isEnumTypeExternal) {
                 codegenModel._enums.add(cp.items);
             }
         }
@@ -336,14 +412,14 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     @Override
     public Map<String, Object> postProcessOperations(Map<String, Object> objs) {
         super.postProcessOperations(objs);
-        Map<String, Object> obj = (Map<String, Object>)objs.get("operations");
+        Map<String, Object> obj = (Map<String, Object>) objs.get("operations");
         List<CodegenOperation> operations = (List<CodegenOperation>) obj.get("operation");
         List<CdsCodegenOperation> cdsCodegenOperations = operations.stream().map(CdsCodegenOperation::new).collect(Collectors.toList());
         obj.put("operation", cdsCodegenOperations);
         List<Object> _enums = new ArrayList<>();
-        for(CdsCodegenOperation co : cdsCodegenOperations) {
+        for (CdsCodegenOperation co : cdsCodegenOperations) {
             for (CodegenParameter cp : co.allParams) {
-                CdsCodegenParameter ccp = (CdsCodegenParameter)cp;
+                CdsCodegenParameter ccp = (CdsCodegenParameter) cp;
                 if (ccp.isEnum && !ccp.isReference) {
                     if (!ccp.datatypeWithEnum.startsWith("Param")) {
                         ccp.datatypeWithEnum = String.format("Param%s", ccp.datatypeWithEnum);
@@ -468,7 +544,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
                 this.datatypeWithEnum = referenceName;
             }
             if (cp.vendorExtensions != null) {
-                String cdsType = (String)cp.vendorExtensions.get("x-cds-type");
+                String cdsType = (String) cp.vendorExtensions.get("x-cds-type");
                 if (!StringUtils.isBlank(cdsType)) {
                     this.cdsTypeAnnotation = buildCdsTypeAnnotation(cdsType);
                     this.isCdsType = true;
@@ -548,7 +624,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
 
             // set cds specific properties
             if (cp.vendorExtensions != null) {
-                String cdsType = (String)cp.vendorExtensions.get("x-cds-type");
+                String cdsType = (String) cp.vendorExtensions.get("x-cds-type");
                 if (!StringUtils.isBlank(cdsType)) {
                     this.cdsTypeAnnotation = buildCdsTypeAnnotation(cdsType);
                     this.isCdsType = true;
