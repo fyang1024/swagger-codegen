@@ -9,6 +9,7 @@ import io.swagger.models.parameters.SerializableParameter;
 import io.swagger.models.properties.*;
 import org.apache.commons.lang3.StringUtils;
 
+import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -432,6 +433,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         List<CodegenOperation> operations = (List<CodegenOperation>) obj.get("operation");
         List<CdsCodegenOperation> cdsCodegenOperations = operations.stream().map(CdsCodegenOperation::new).collect(Collectors.toList());
         obj.put("operation", cdsCodegenOperations);
+        obj.put("apiPackage", apiPackage + "." + operations.get(0).tags.get(0).getName().split(" ")[0]);
         List<Object> _enums = new ArrayList<>();
         for (CdsCodegenOperation co : cdsCodegenOperations) {
             for (CodegenParameter cp : co.allParams) {
@@ -449,6 +451,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             }
         }
         objs.put("_enums", _enums);
+        postProcessImports(objs);
         List<String> tagNames = operations.get(0).tags.stream().map(Tag::getName).collect(Collectors.toList());
         objs.put("tags", tagNames);
         objs.put("section", getGroupTag(operations.get(0)));
@@ -457,9 +460,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         return objs;
     }
 
-    @Override
-    public Map<String, Object> postProcessModels(Map<String, Object> objs) {
-        super.postProcessModels(objs);
+    private void postProcessImports(Map<String, Object> objs) {
         List<Object> imports = (List) objs.get("imports");
         for (Object o : imports) {
             Map<String, String> importMap = (Map<String, String>) o;
@@ -467,6 +468,34 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
                 importMap.put(entry.getKey(), transformImport(entry.getValue()));
             }
         }
+    }
+
+    @Override
+    public String apiFilename(String templateName, String tag) {
+        String suffix = apiTemplateFiles().get(templateName);
+        return apiFileFolder() + File.separator + getApiSubPackage(tag) + File.separator + toApiFilename(tag) + suffix;
+    }
+
+    private String getApiSubPackage(String tag) {
+        StringBuilder sb = new StringBuilder();
+        int capticalCharOcurrence = 0;
+        for (char c : tag.toCharArray()) {
+            if (Character.isUpperCase(c)) {
+                capticalCharOcurrence += 1;
+            }
+            if (capticalCharOcurrence < 2) {
+                sb.append(Character.toLowerCase(c));
+            } else {
+                break;
+            }
+        }
+        return sb.toString();
+    }
+
+    @Override
+    public Map<String, Object> postProcessModels(Map<String, Object> objs) {
+        super.postProcessModels(objs);
+        postProcessImports(objs);
         objs.put("openBracket", "{");
         objs.put("closeBracket", "}");
         return objs;
@@ -481,7 +510,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         return "@CDSDataType(CustomDataType." + cdsType.replace("String", "") + ")";
     }
 
-    private class CdsCodegenOperation extends CodegenOperation {
+    public class CdsCodegenOperation extends CodegenOperation {
 
         CdsCodegenOperation(CodegenOperation co) {
 
@@ -503,7 +532,6 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             this.httpMethod = co.httpMethod;
             this.returnBaseType = co.returnBaseType;
             this.summary = co.summary;
-            this.notes = co.notes;
             this.baseName = co.baseName;
             this.defaultResponse = co.defaultResponse;
             this.discriminator = co.discriminator;
