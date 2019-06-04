@@ -321,10 +321,11 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             cdsCodegenProperty.items = new CdsCodegenProperty(property.items);
         }
         replaceProperty(model, cdsCodegenProperty);
-        if (cdsCodegenProperty.datatype.equals("Meta") || cdsCodegenProperty.datatype.equals("Links")) {
+        List<String> inheritedProperties = Arrays.asList("Links", "MetaPaginated", "LinksPaginated");
+        if (inheritedProperties.contains(cdsCodegenProperty.datatype)) {
             cdsCodegenProperty.isInherited = true;
-        } else if (cdsCodegenProperty.datatype.equals("MetaPaginated") || cdsCodegenProperty.datatype.equals("LinksPaginated")) {
-            cdsCodegenProperty.isInherited = true;
+        } else if (cdsCodegenProperty.datatype.equals("Meta")) {
+            if (hasLinksProperty(model)) cdsCodegenProperty.isInherited = true;
         }
         if (!cdsCodegenProperty.defaultValue.equals("null") &&
             !StringUtils.isBlank(cdsCodegenProperty.defaultValue) &&
@@ -338,6 +339,15 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
                 findEnumType(cdsCodegenProperty.items, model.interfaces);
             }
         }
+    }
+
+    private boolean hasLinksProperty(CodegenModel model) {
+        for (CodegenProperty cp : model.vars) {
+            if (cp.datatype.equals("Links")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String findEnumType(CodegenProperty cp, List<String> interfaces) {
@@ -400,14 +410,17 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     @Override
     public CodegenModel fromModel(String name, Model model, Map<String, Model> allDefinitions) {
         CdsCodegenModel codegenModel = new CdsCodegenModel(super.fromModel(name, model, allDefinitions));
+        String subPackage = getSubPackage(name);
         if (model.getProperties() != null) {
             Property property = model.getProperties().get("links");
             if (property != null) {
                 RefProperty refProperty = (RefProperty) property;
                 if (refProperty.getSimpleRef().equals("Links")) {
                     codegenModel.isBaseResponse = true;
+                    codegenModel.importingBaseResponse = !"common".equals(subPackage);
                 } else if (refProperty.getSimpleRef().equals("LinksPaginated")) {
                     codegenModel.isPaginatedResponse = true;
+                    codegenModel.importingPaginatedResponse = !"common".equals(subPackage);
                 }
             }
         }
@@ -433,6 +446,8 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         List<CodegenOperation> operations = (List<CodegenOperation>) obj.get("operation");
         List<CdsCodegenOperation> cdsCodegenOperations = operations.stream().map(CdsCodegenOperation::new).collect(Collectors.toList());
         obj.put("operation", cdsCodegenOperations);
+        Set<String> addedImports = new HashSet<>();
+        Set<String> addedEnums = new HashSet<>();
         List imports  = (List)objs.get("imports");
         List<Object> _enums = new ArrayList<>();
         for (CdsCodegenOperation co : cdsCodegenOperations) {
@@ -440,14 +455,18 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
                 CdsCodegenParameter ccp = (CdsCodegenParameter) cp;
                 if (ccp.isEnum) {
                     if (ccp.isReference) {
-                        imports.add(new HashMap<String, String>(){{
-                            put("import", modelPackage + "." + ccp.referenceName);
-                        }});
-                    } else {
+                        if (!addedImports.contains(ccp.referenceName)) {
+                            imports.add(new HashMap<String, String>() {{
+                                put("import", modelPackage + "." + ccp.referenceName);
+                            }});
+                            addedImports.add(ccp.referenceName);
+                        }
+                    } else if (!addedEnums.contains(ccp.datatypeWithEnum)) {
                         if (!ccp.datatypeWithEnum.startsWith("Param")) {
                             ccp.datatypeWithEnum = String.format("Param%s", ccp.datatypeWithEnum);
                         }
                         _enums.add(ccp);
+                        addedEnums.contains(ccp.datatypeWithEnum);
                     }
                 }
             }
@@ -456,7 +475,8 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
                 cr.code = "ResponseCode." + (responseCode == null ? cr.code : responseCode);
             }
         }
-        objs.put("cdsApiPackage", apiPackage + "." + operations.get(0).tags.get(0).getName().split(" ")[0].toLowerCase());
+        String currentPackage = apiPackage + "." + operations.get(0).tags.get(0).getName().split(" ")[0].toLowerCase();
+        objs.put("cdsApiPackage", currentPackage);
         objs.put("_enums", _enums);
         postProcessImports(objs);
         List<String> tagNames = operations.get(0).tags.stream().map(Tag::getName).collect(Collectors.toList());
@@ -468,11 +488,36 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     }
 
     private void postProcessImports(Map<String, Object> objs) {
+        String currentPackage = null;
+        CdsCodegenModel model = null;
+        List<Object> models = (List<Object>)objs.get("models");
+        if (models != null) {
+            Map<String, Object> map = (Map<String, Object>)models.get(0);
+            model = (CdsCodegenModel) map.get("model");
+            currentPackage = getSubPackage(model.classname);
+        }
         List<Object> imports = (List) objs.get("imports");
-        for (Object o : imports) {
-            Map<String, String> importMap = (Map<String, String>) o;
-            for (Map.Entry<String, String> entry : importMap.entrySet()) {
-                importMap.put(entry.getKey(), transformImport(entry.getValue()));
+        Iterator<Object> iterator = imports.iterator();
+        while (iterator.hasNext()) {
+            Map<String, String> importMap = (Map<String, String>) iterator.next();
+            Iterator<Map.Entry<String, String>> iter = importMap.entrySet().iterator();
+            while (iter.hasNext()) {
+                Map.Entry<String, String> i = iter.next();
+                String originalImport = i.getValue();
+                String[] packages = originalImport.split("\\.");
+                String importedModel = packages[packages.length - 1];
+                if(Objects.equals(currentPackage, getSubPackage(importedModel))) {
+                    iter.remove();
+                } else if (model != null && model.isBaseResponse && (importedModel.equals("Links") || importedModel.equals("Meta"))) {
+                    iter.remove();
+                } else if (model != null && model.isPaginatedResponse && (importedModel.equals("LinksPaginated") || importedModel.equals("MetaPaginated"))) {
+                    iter.remove();
+                } else {
+                    importMap.put(i.getKey(), transformImport(originalImport));
+                }
+            }
+            if (importMap.isEmpty()) {
+                iterator.remove();
             }
         }
     }
@@ -627,6 +672,8 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
 
         public boolean isSimple;
         public boolean isReferenced;
+        public boolean importingBaseResponse;
+        public boolean importingPaginatedResponse;
         public boolean isBaseResponse;
         public boolean isPaginatedResponse;
         public List<CodegenProperty> _enums = new ArrayList<>();
@@ -699,6 +746,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
         public boolean isCdsType;
         public boolean isDefaultValueVisible;
         public boolean isEnumTypeExternal;
+        public boolean isSimple;
 
         CdsCodegenProperty(CodegenProperty cp) {
 
@@ -724,6 +772,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
                     this.isCdsType = true;
                 }
             }
+            this.isSimple = (StringUtils.isBlank(description) && !required);
         }
     }
 }

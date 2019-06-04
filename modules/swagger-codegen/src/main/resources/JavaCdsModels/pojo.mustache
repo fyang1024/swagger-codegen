@@ -13,25 +13,15 @@ public class {{classname}}{{#isPaginatedResponse}} extends PaginatedResponse{{/i
 
 {{>enumClass}}
 {{/_enums}}
-{{#requiredVars}}
+{{#vars}}
     {{^isInherited}}
 
-    @Property({{#description}}
-        description = "{{{description}}}",{{/description}}
-        required = true
-    ){{#isCdsType}}
+    @Property{{^isSimple}}({{#description}}
+        description = "{{{description}}}"{{/description}}{{#required}}{{#description}},{{/description}}{{/required}}{{#required}}
+        required = true{{/required}}
+    ){{/isSimple}}{{#isCdsType}}
     {{cdsTypeAnnotation}}{{/isCdsType}}
     {{{datatypeWithEnum}}} {{baseName}}{{#isDefaultValueVisible}} = {{defaultValue}}{{/isDefaultValueVisible}};
     {{/isInherited}}
-{{/requiredVars}}
-{{#optionalVars}}
-    {{^isInherited}}
-
-    @Property{{#description}}(
-        description = "{{{description}}}"
-    ){{/description}}{{#isCdsType}}
-    {{cdsTypeAnnotation}}{{/isCdsType}}
-    {{{datatypeWithEnum}}} {{baseName}}{{#isDefaultValueVisible}} = {{defaultValue}}{{/isDefaultValueVisible}};
-    {{/isInherited}}
-{{/optionalVars}}
+{{/vars}}
 }{{/model}}{{/models}}
