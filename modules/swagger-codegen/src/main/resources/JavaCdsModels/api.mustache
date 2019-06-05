@@ -15,10 +15,10 @@ public interface {{classname}}  {
 
     @Endpoint(
         path = "{{{path}}}",
-        summary = "{{ summary }}",
-        description = "{{{notes}}}",
+        summary = "{{ summary }}",{{#notes}}
+        description = "{{{notes}}}",{{/notes}}
         requestMethod = RequestMethod.{{ httpMethod }},
-        operationId = "{{nickname}}",
+        operationId = "{{operationId}}",
         responses = {
             {{#responses}}@EndpointResponse(
                 responseCode = {{code}},

@@ -580,6 +580,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             this.hasReference = co.hasReference;
             this.path = co.path;
             this.operationId = co.operationId;
+            this.notes = co.notes;
             this.returnType = co.returnType;
             this.httpMethod = co.httpMethod;
             this.returnBaseType = co.returnBaseType;
