@@ -333,12 +333,27 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
             cdsCodegenProperty.isDefaultValueVisible = true;
         }
         if (model.interfaces != null && !model.interfaces.isEmpty()) {
+            cdsCodegenProperty.isInherited = propertyExists(cdsCodegenProperty, model.interfaces);
             if (cdsCodegenProperty.isEnum) {
                 findEnumType(cdsCodegenProperty, model.interfaces);
             } else if (cdsCodegenProperty.items != null && cdsCodegenProperty.items.isEnum) {
                 findEnumType(cdsCodegenProperty.items, model.interfaces);
             }
         }
+    }
+
+    private boolean propertyExists(CodegenProperty property, List<String> interfaces) {
+        for (String modelKey : interfaces) {
+            Model model = swagger.getDefinitions().get(modelKey);
+            if (model != null) {
+                for (String propertyName : model.getProperties().keySet()) {
+                    if (property.baseName.equals(propertyName)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private boolean hasLinksProperty(CodegenModel model) {
