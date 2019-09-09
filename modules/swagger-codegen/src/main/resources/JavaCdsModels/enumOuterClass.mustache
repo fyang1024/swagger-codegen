@@ -3,7 +3,7 @@ import au.org.consumerdatastandards.support.data.*;
 @DataDefinition(
     description = "{{#description}}{{{description}}}{{/description}}"
 )
-public enum {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{{classname}}}{{/datatypeWithEnum}} {{openBracket}}{{#allowableValues}}{{#enumVars}}
-    {{{name}}}{{^-last}},{{/-last}}{{/enumVars}}
+public enum {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{{classname}}}{{/datatypeWithEnum}} {{openBracket}}{{#allowableValues}}{{#values}}
+    {{{.}}}{{^-last}},{{/-last}}{{/values}}
 {{/allowableValues}}
 }
