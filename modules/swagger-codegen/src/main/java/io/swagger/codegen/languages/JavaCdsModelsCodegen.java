@@ -212,6 +212,7 @@ public class JavaCdsModelsCodegen extends AbstractJavaCodegen {
     private void processProperty(String modelName, Property property, String propertyName) {
         if (property instanceof RefProperty) {
             String ref = ((RefProperty) property).getSimpleRef();
+            refModels.add(ref);
             Set<String> packageNames = modelPackages.get(modelName);
             if (packageNames != null) {
                 packageNames.forEach(p -> processModel(p, ref, swagger.getDefinitions().get(ref)));
